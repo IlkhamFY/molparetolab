@@ -4,7 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MolParetoLab - Multi-Objective Molecule Analysis</title>
-<script src="https://cdn.jsdelivr.net/npm/@rdkit/rdkit@2025.3.4-1.0.0/dist/index.js"></script>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230a0a0f'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-family='system-ui' font-size='18' font-weight='700' fill='%236366f1'%3EMP%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@rdkit/rdkit@2025.3.4-1.0.0/dist/RDKit_minimal.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
 <style>
@@ -394,9 +398,55 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
   text-align: center;
 }
 
-.empty-state .icon { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }
-.empty-state h3 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
-.empty-state p { font-size: 13px; max-width: 400px; line-height: 1.6; }
+.empty-state .icon {
+  font-size: 56px;
+  margin-bottom: 20px;
+  opacity: 0.5;
+  filter: grayscale(0.3);
+}
+
+.empty-state h3 {
+  font-size: 20px;
+  margin-bottom: 10px;
+  color: var(--text);
+  font-weight: 600;
+  letter-spacing: -0.3px;
+}
+
+.empty-state p {
+  font-size: 13px;
+  max-width: 420px;
+  line-height: 1.7;
+  color: var(--text2);
+}
+
+.empty-state .features {
+  display: flex;
+  gap: 24px;
+  margin-top: 28px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.empty-state .feature {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text2);
+  padding: 14px 18px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  min-width: 120px;
+  transition: border-color 0.2s;
+}
+
+.empty-state .feature:hover { border-color: var(--accent); }
+
+.empty-state .feature .feat-icon { font-size: 20px; opacity: 0.7; }
+.empty-state .feature .feat-label { font-weight: 500; color: var(--text); }
 
 /* Axis selectors */
 .axis-selectors {
@@ -514,7 +564,7 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
     <div class="section-label">Input SMILES</div>
     <textarea id="smilesInput" placeholder="paste SMILES (one per line, optionally with name after space)&#10;&#10;CCO ethanol&#10;c1ccccc1 benzene&#10;CC(=O)Oc1ccccc1C(=O)O aspirin"></textarea>
     <button class="btn btn-primary" id="analyzeBtn" onclick="analyze()" disabled>
-      <span class="spinner" id="initSpinner" style="margin:0"></span>
+      <span class="spinner" style="margin:0;display:inline-block;width:14px;height:14px"></span>
       loading rdkit...
     </button>
     <div class="status" id="status"></div>
@@ -540,9 +590,31 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
 
   <div class="content" id="content">
     <div class="empty-state">
-      <div class="icon">&#9878;</div>
-      <h3>paste molecules to start</h3>
-      <p>enter SMILES strings in the sidebar and click analyze. you'll get instant pareto analysis across drug-likeness properties — no server, everything runs in your browser.</p>
+      <div class="icon">⚗️</div>
+      <h3>Paste molecules to begin analysis</h3>
+      <p>Enter SMILES strings in the sidebar or load an example set. Instant multi-objective Pareto analysis across drug-likeness properties — everything runs client-side via RDKit WASM.</p>
+      <div class="features">
+        <div class="feature">
+          <span class="feat-icon">📊</span>
+          <span class="feat-label">Pareto Fronts</span>
+          <span>6 scatter plots</span>
+        </div>
+        <div class="feature">
+          <span class="feat-icon">🎯</span>
+          <span class="feat-label">Lipinski Ro5</span>
+          <span>pass/fail check</span>
+        </div>
+        <div class="feature">
+          <span class="feat-icon">🕸️</span>
+          <span class="feat-label">Radar View</span>
+          <span>property overlay</span>
+        </div>
+        <div class="feature">
+          <span class="feat-icon">⚔️</span>
+          <span class="feat-label">Dominance</span>
+          <span>pairwise matrix</span>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -612,11 +684,14 @@ c1ccc(cc1)-c1ccc2c(c1)ccc1c3cc(-c4ccncc4)ccc3[nH]c21 ponatinib_core`,
 async function initRDKit() {
   try {
     RDKitModule = await initRDKitModule();
-    document.getElementById('analyzeBtn').disabled = false;
-    document.getElementById('analyzeBtn').innerHTML = 'Analyze Molecules';
-    document.getElementById('initSpinner').style.display = 'none';
-    setStatus('rdkit loaded. paste SMILES and click analyze.', 'success');
+    const btn = document.getElementById('analyzeBtn');
+    btn.disabled = false;
+    btn.innerHTML = 'Analyze Molecules';
+    setStatus('rdkit loaded — paste SMILES and click analyze', 'success');
   } catch(e) {
+    const btn = document.getElementById('analyzeBtn');
+    btn.innerHTML = 'Analyze Molecules';
+    btn.disabled = true;
     setStatus('failed to load rdkit: ' + e.message, 'error');
   }
 }
