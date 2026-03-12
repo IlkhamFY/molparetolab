@@ -937,6 +937,206 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
 .row { display: flex; gap: 16px; }
 .row > * { flex: 1; }
 
+/* Hover structure tooltip */
+.mol-hover-tooltip {
+  position: fixed;
+  z-index: 2000;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  max-width: 260px;
+}
+
+.mol-hover-tooltip.visible { opacity: 1; }
+
+.mol-hover-tooltip .tooltip-svg {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.mol-hover-tooltip .tooltip-svg svg { max-width: 180px; max-height: 120px; }
+
+.mol-hover-tooltip .tooltip-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+.mol-hover-tooltip .tooltip-props {
+  font-size: 11px;
+  color: var(--text2);
+  font-family: 'JetBrains Mono', monospace;
+  text-align: center;
+}
+
+.mol-hover-tooltip .tooltip-pareto {
+  font-size: 10px;
+  text-align: center;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  display: inline-block;
+}
+
+/* Parallel coordinates */
+.parallel-container {
+  position: relative;
+  height: 500px;
+}
+
+.parallel-legend {
+  display: flex;
+  gap: 16px;
+  font-size: 11px;
+  color: var(--text2);
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+/* Scoring view */
+.scoring-profiles {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.profile-btn {
+  font-size: 11px;
+  padding: 6px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  transition: all 0.15s;
+  font-weight: 500;
+}
+
+.profile-btn:hover { border-color: var(--accent); color: var(--text); }
+.profile-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+.weight-slider-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 50px;
+  gap: 12px;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.weight-slider-row label {
+  font-size: 12px;
+  color: var(--text2);
+  font-weight: 500;
+}
+
+.weight-slider-row input[type="range"] {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.weight-slider-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--bg);
+}
+
+.weight-slider-row input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--bg);
+}
+
+.weight-slider-row .weight-val {
+  font-size: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  color: var(--accent2);
+  text-align: right;
+}
+
+.scoring-rank-list {
+  margin-top: 16px;
+}
+
+.scoring-rank-item {
+  display: grid;
+  grid-template-columns: 32px 1fr 60px;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  transition: border-color 0.15s;
+}
+
+.scoring-rank-item:first-child { border-color: var(--green); }
+.scoring-rank-item.is-pareto { border-left: 3px solid var(--green); }
+
+.scoring-rank-num {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text2);
+  text-align: center;
+}
+
+.scoring-rank-item:first-child .scoring-rank-num { color: var(--green); }
+
+.scoring-rank-info .rank-name {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.scoring-rank-info .rank-bar-wrap {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.scoring-rank-info .rank-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+
+.scoring-rank-info .rank-detail {
+  font-size: 10px;
+  color: var(--text2);
+  margin-top: 3px;
+}
+
+.scoring-rank-score {
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', monospace;
+  text-align: right;
+}
+
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -1012,10 +1212,17 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
     <div class="hero-pill"><span class="pill-icon">🔬</span> Molecule Comparison</div>
     <div class="hero-pill"><span class="pill-icon">📁</span> SDF File Upload</div>
     <div class="hero-pill"><span class="pill-icon">🔗</span> Shareable URLs</div>
+    <div class="hero-pill"><span class="pill-icon">📏</span> Parallel Coordinates</div>
+    <div class="hero-pill"><span class="pill-icon">🎯</span> Scoring Profiles</div>
   </div>
 </div>
 
 <div id="toast" class="toast"></div>
+<div class="mol-hover-tooltip" id="molHoverTooltip">
+  <div class="tooltip-svg" id="tooltipSvg"></div>
+  <div class="tooltip-name" id="tooltipName"></div>
+  <div class="tooltip-props" id="tooltipProps"></div>
+</div>
 
 <div class="main">
   <div class="sidebar">
@@ -1105,6 +1312,18 @@ let selectedMolIdx = null;
 let currentView = 'pareto';
 let compareIndices = []; // indices of 2 molecules selected for comparison
 let activeFilters = new Set(['lipinski']); // default filter
+let pcBrushes = {}; // parallel coords brushes: { axisKey: [min, max] }
+
+// ---- Scoring profiles ----
+const SCORING_PROFILES = {
+  druglike:  { label: 'Drug-like',           weights: { MW: 0.20, LogP: 0.20, HBD: 0.15, HBA: 0.15, TPSA: 0.15, RotBonds: 0.15 } },
+  cns:       { label: 'CNS Drug',            weights: { MW: 0.20, LogP: 0.25, HBD: 0.15, HBA: 0.05, TPSA: 0.30, RotBonds: 0.05 } },
+  oral:      { label: 'Oral Bioavailability', weights: { MW: 0.20, LogP: 0.15, HBD: 0.10, HBA: 0.05, TPSA: 0.25, RotBonds: 0.25 } },
+  leadlike:  { label: 'Lead-like',            weights: { MW: 0.30, LogP: 0.25, HBD: 0.10, HBA: 0.10, TPSA: 0.05, RotBonds: 0.20 } },
+  custom:    { label: 'Custom',               weights: { MW: 0.17, LogP: 0.17, HBD: 0.17, HBA: 0.17, TPSA: 0.16, RotBonds: 0.16 } },
+};
+let currentProfile = 'druglike';
+let scoringWeights = { ...SCORING_PROFILES.druglike.weights };
 
 // ---- Property definitions ----
 const PROPERTIES = [
@@ -1529,8 +1748,10 @@ function renderContent() {
       <button class="tab ${currentView==='pareto'?'active':''}" onclick="switchView('pareto')">Pareto Scatter</button>
       <button class="tab ${currentView==='egg'?'active':''}" onclick="switchView('egg')">🥚 BOILED-Egg</button>
       <button class="tab ${currentView==='radar'?'active':''}" onclick="switchView('radar')">Radar</button>
+      <button class="tab ${currentView==='parallel'?'active':''}" onclick="switchView('parallel')">📏 Parallel</button>
       <button class="tab ${currentView==='table'?'active':''}" onclick="switchView('table')">Properties</button>
       <button class="tab ${currentView==='dominance'?'active':''}" onclick="switchView('dominance')">Dominance</button>
+      <button class="tab ${currentView==='scoring'?'active':''}" onclick="switchView('scoring')">🎯 Scoring</button>
       <button class="tab ${currentView==='compare'?'active':''}" onclick="switchView('compare')">🔬 Compare${compareIndices.length===2?' (2)':''}</button>
     </div>
 
@@ -1541,8 +1762,10 @@ function renderContent() {
   if (currentView === 'pareto') renderParetoView(container);
   else if (currentView === 'egg') renderEggView(container);
   else if (currentView === 'radar') renderRadarView(container);
+  else if (currentView === 'parallel') renderParallelView(container);
   else if (currentView === 'table') renderTableView(container);
   else if (currentView === 'dominance') renderDominanceView(container);
+  else if (currentView === 'scoring') renderScoringView(container);
   else if (currentView === 'compare') renderCompareView(container);
 }
 
@@ -1626,17 +1849,44 @@ function getFilterAnnotations(xKey, yKey) {
   return annotations;
 }
 
+// ---- Hover tooltip helpers ----
+function findMolByLabel(label) {
+  return molecules.findIndex(m => m.name === label);
+}
+
+function showMolTooltip(molIdx, x, y, xKey, yKey) {
+  const tooltip = document.getElementById('molHoverTooltip');
+  const m = molecules[molIdx];
+  if (!m) { hideMolTooltip(); return; }
+  document.getElementById('tooltipSvg').innerHTML = m.svg;
+  document.getElementById('tooltipName').textContent = m.name;
+  document.getElementById('tooltipProps').innerHTML =
+    `${xKey}: ${m.props[xKey].toFixed(1)}  |  ${yKey}: ${m.props[yKey].toFixed(1)}` +
+    `<div class="tooltip-pareto" style="background:${m.paretoRank===1?'rgba(34,197,94,0.15);color:#22c55e':'rgba(239,68,68,0.15);color:#ef4444'}">${m.paretoRank===1?'pareto-optimal':'dominated'}</div>`;
+  // Position: offset from cursor, keep on screen
+  let left = x + 16, top = y - 20;
+  const tw = 260, th = 220;
+  if (left + tw > window.innerWidth) left = x - tw - 16;
+  if (top + th > window.innerHeight) top = window.innerHeight - th - 8;
+  if (top < 8) top = 8;
+  tooltip.style.left = left + 'px';
+  tooltip.style.top = top + 'px';
+  tooltip.classList.add('visible');
+}
+
+function hideMolTooltip() {
+  document.getElementById('molHoverTooltip').classList.remove('visible');
+}
+
 function buildScatterChart(canvas, xKey, yKey, chartIdx) {
   const datasets = [];
 
-  const passData = molecules.filter(m => m.filters.lipinski.pass).map(m => ({
-    x: m.props[xKey], y: m.props[yKey], label: m.name,
-    pareto: m.paretoRank === 1,
-  }));
-  const failData = molecules.filter(m => !m.filters.lipinski.pass).map(m => ({
-    x: m.props[xKey], y: m.props[yKey], label: m.name,
-    pareto: m.paretoRank === 1,
-  }));
+  // Build data with molecule index for tooltip lookup
+  const passData = []; const failData = [];
+  molecules.forEach((m, i) => {
+    const pt = { x: m.props[xKey], y: m.props[yKey], label: m.name, molIdx: i, pareto: m.paretoRank === 1 };
+    if (m.filters.lipinski.pass) passData.push(pt); else failData.push(pt);
+  });
 
   datasets.push({
     label: 'Ro5 Pass', data: passData,
@@ -1682,21 +1932,14 @@ function buildScatterChart(canvas, xKey, yKey, chartIdx) {
 
   const annotations = getFilterAnnotations(xKey, yKey);
 
-  new Chart(canvas, {
+  const chartInstance = new Chart(canvas, {
     type: 'scatter',
     data: { datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
       plugins: {
         legend: { display: false },
-        tooltip: {
-          callbacks: {
-            label: (ctx) => {
-              const d = ctx.raw;
-              return `${d.label}: ${xKey}=${d.x.toFixed(1)}, ${yKey}=${d.y.toFixed(1)}`;
-            }
-          }
-        },
+        tooltip: { enabled: false },
         annotation: { annotations },
       },
       scales: {
@@ -1711,8 +1954,26 @@ function buildScatterChart(canvas, xKey, yKey, chartIdx) {
           ticks: { color: '#8888a0' },
         },
       },
+      onHover: (event) => {
+        const points = chartInstance.getElementsAtEventForMode(event, 'nearest', { intersect: true }, false);
+        if (points.length > 0) {
+          const pt = points[0];
+          const dsIdx = pt.datasetIndex;
+          const dIdx = pt.index;
+          const raw = chartInstance.data.datasets[dsIdx].data[dIdx];
+          if (raw && raw.molIdx !== undefined) {
+            const rect = canvas.getBoundingClientRect();
+            showMolTooltip(raw.molIdx, event.native.clientX, event.native.clientY, xKey, yKey);
+          }
+        } else {
+          hideMolTooltip();
+        }
+      },
     }
   });
+
+  // Hide tooltip when mouse leaves canvas
+  canvas.addEventListener('mouseleave', hideMolTooltip);
 }
 
 function renderParetoView(container) {
@@ -2320,6 +2581,347 @@ function renderDominanceView(container) {
   html += '</div>';
 
   container.innerHTML = html;
+}
+
+// ---- Parallel Coordinates View ----
+function renderParallelView(container) {
+  container.innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">📏 Parallel Coordinates</div>
+          <div class="panel-subtitle">drag on axes to brush-filter molecules · click axis to clear</div>
+        </div>
+      </div>
+      <div class="parallel-legend">
+        <div class="legend-item"><span class="legend-dot" style="background:#22c55e"></span> Pareto-optimal</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#ef4444"></span> Dominated</div>
+        <div class="legend-item"><span class="legend-line" style="border-top:2px dashed #eab308;background:none;width:16px;height:0"></span> Lipinski limit</div>
+      </div>
+      <div class="parallel-container">
+        <canvas id="parallelCanvas" style="width:100%;height:100%"></canvas>
+      </div>
+    </div>
+  `;
+  drawParallelCoords();
+}
+
+function drawParallelCoords() {
+  const canvas = document.getElementById('parallelCanvas');
+  if (!canvas) return;
+
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = rect.width;
+  const H = rect.height;
+
+  const axes = ['MW', 'LogP', 'HBD', 'HBA', 'TPSA', 'RotBonds'];
+  const padLeft = 50, padRight = 50, padTop = 40, padBottom = 40;
+  const plotW = W - padLeft - padRight;
+  const plotH = H - padTop - padBottom;
+  const axisSpacing = plotW / (axes.length - 1);
+
+  // Compute min/max for each axis
+  const ranges = {};
+  axes.forEach(k => {
+    const vals = molecules.map(m => m.props[k]);
+    const mn = Math.min(...vals);
+    const mx = Math.max(...vals);
+    const pad = (mx - mn) * 0.05 || 1;
+    ranges[k] = { min: mn - pad, max: mx + pad };
+  });
+
+  // Lipinski limits
+  const lipinskiLimits = { MW: 500, LogP: 5, HBD: 5, HBA: 10, TPSA: 140, RotBonds: 10 };
+
+  function axisX(i) { return padLeft + i * axisSpacing; }
+  function valToY(key, val) {
+    const r = ranges[key];
+    return padTop + plotH - ((val - r.min) / (r.max - r.min)) * plotH;
+  }
+  function yToVal(key, y) {
+    const r = ranges[key];
+    return r.min + ((padTop + plotH - y) / plotH) * (r.max - r.min);
+  }
+
+  // Check if molecule passes all active brushes
+  function passesBrushes(m) {
+    for (const [key, br] of Object.entries(pcBrushes)) {
+      const v = m.props[key];
+      if (v < br[0] || v > br[1]) return false;
+    }
+    return true;
+  }
+
+  // Background
+  ctx.fillStyle = '#12121a';
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw axes
+  axes.forEach((k, i) => {
+    const x = axisX(i);
+    ctx.strokeStyle = '#3a3a4a';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, padTop);
+    ctx.lineTo(x, padTop + plotH);
+    ctx.stroke();
+
+    // Axis label
+    ctx.font = '12px Inter, sans-serif';
+    ctx.fillStyle = '#e0e0e8';
+    ctx.textAlign = 'center';
+    ctx.fillText(k, x, padTop - 14);
+
+    // Min/max labels
+    ctx.font = '10px JetBrains Mono, monospace';
+    ctx.fillStyle = '#8888a0';
+    ctx.fillText(ranges[k].max.toFixed(1), x, padTop - 2);
+    ctx.fillText(ranges[k].min.toFixed(1), x, padTop + plotH + 14);
+
+    // Lipinski threshold
+    if (lipinskiLimits[k] !== undefined) {
+      const ly = valToY(k, lipinskiLimits[k]);
+      if (ly >= padTop && ly <= padTop + plotH) {
+        ctx.strokeStyle = '#eab30866';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(x - 12, ly);
+        ctx.lineTo(x + 12, ly);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    // Brush indicator
+    if (pcBrushes[k]) {
+      const by1 = valToY(k, pcBrushes[k][1]);
+      const by2 = valToY(k, pcBrushes[k][0]);
+      ctx.fillStyle = 'rgba(99,102,241,0.15)';
+      ctx.fillRect(x - 10, by1, 20, by2 - by1);
+      ctx.strokeStyle = '#6366f1';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x - 10, by1, 20, by2 - by1);
+    }
+  });
+
+  // Draw molecule lines (faded first, then highlighted)
+  const sorted = molecules.map((m, i) => ({ m, i, passes: passesBrushes(m) }));
+  // Draw non-passing first (faded)
+  sorted.filter(s => !s.passes).forEach(({ m, i }) => {
+    ctx.strokeStyle = 'rgba(100,100,120,0.1)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    axes.forEach((k, ai) => {
+      const x = axisX(ai);
+      const y = valToY(k, m.props[k]);
+      if (ai === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  });
+
+  // Draw passing molecules
+  sorted.filter(s => s.passes).forEach(({ m, i }) => {
+    const isSelected = i === selectedMolIdx;
+    const isPareto = m.paretoRank === 1;
+    ctx.strokeStyle = isSelected ? '#818cf8' : isPareto ? 'rgba(34,197,94,0.6)' : 'rgba(239,68,68,0.35)';
+    ctx.lineWidth = isSelected ? 3 : 1.5;
+    if (isSelected) {
+      ctx.shadowColor = '#818cf8';
+      ctx.shadowBlur = 8;
+    }
+    ctx.beginPath();
+    axes.forEach((k, ai) => {
+      const x = axisX(ai);
+      const y = valToY(k, m.props[k]);
+      if (ai === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  });
+
+  // ---- Interaction: hover + brush ----
+  let isDragging = false, dragAxisIdx = -1, dragStartY = 0;
+
+  canvas.onmousemove = (e) => {
+    if (isDragging) return;
+    const cr = canvas.getBoundingClientRect();
+    const mx = e.clientX - cr.left;
+    const my = e.clientY - cr.top;
+    // Find nearest molecule line
+    let bestDist = 20, bestIdx = -1;
+    molecules.forEach((m, mi) => {
+      axes.forEach((k, ai) => {
+        const x = axisX(ai);
+        const y = valToY(k, m.props[k]);
+        const d = Math.sqrt((mx - x) ** 2 + (my - y) ** 2);
+        if (d < bestDist) { bestDist = d; bestIdx = mi; }
+      });
+    });
+    if (bestIdx >= 0) {
+      showMolTooltip(bestIdx, e.clientX, e.clientY, 'MW', 'LogP');
+      canvas.style.cursor = 'pointer';
+    } else {
+      hideMolTooltip();
+      canvas.style.cursor = 'crosshair';
+    }
+  };
+
+  canvas.onmouseleave = () => { hideMolTooltip(); isDragging = false; };
+
+  canvas.onmousedown = (e) => {
+    const cr = canvas.getBoundingClientRect();
+    const mx = e.clientX - cr.left;
+    const my = e.clientY - cr.top;
+    // Find which axis we're near
+    for (let ai = 0; ai < axes.length; ai++) {
+      if (Math.abs(mx - axisX(ai)) < 20) {
+        isDragging = true;
+        dragAxisIdx = ai;
+        dragStartY = my;
+        break;
+      }
+    }
+  };
+
+  canvas.onmouseup = (e) => {
+    if (!isDragging) return;
+    const cr = canvas.getBoundingClientRect();
+    const my = e.clientY - cr.top;
+    const key = axes[dragAxisIdx];
+    if (Math.abs(my - dragStartY) < 5) {
+      // Click without drag: clear brush on this axis
+      delete pcBrushes[key];
+    } else {
+      // Set brush
+      const v1 = yToVal(key, dragStartY);
+      const v2 = yToVal(key, my);
+      pcBrushes[key] = [Math.min(v1, v2), Math.max(v1, v2)];
+    }
+    isDragging = false;
+    dragAxisIdx = -1;
+    drawParallelCoords(); // Redraw
+  };
+}
+
+// ---- Scoring View ----
+function setProfile(name) {
+  currentProfile = name;
+  if (name !== 'custom') {
+    scoringWeights = { ...SCORING_PROFILES[name].weights };
+  }
+  renderContent();
+}
+
+function updateWeight(key, val) {
+  scoringWeights[key] = parseFloat(val);
+  currentProfile = 'custom';
+  renderContent();
+}
+
+function computeScores() {
+  const keys = ['MW', 'LogP', 'HBD', 'HBA', 'TPSA', 'RotBonds'];
+  // Compute utopia (best) and ranges
+  const utopia = {}, nadir = {};
+  keys.forEach(k => {
+    const vals = molecules.map(m => m.props[k]);
+    utopia[k] = Math.min(...vals); // lower is better for all scoring keys
+    nadir[k] = Math.max(...vals);
+  });
+
+  return molecules.map((m, i) => {
+    // Weighted Chebyshev: score = max_k(w_k * |f_k - f_k*| / range_k)
+    let maxTerm = 0;
+    let worstProp = '';
+    const terms = {};
+    keys.forEach(k => {
+      const range = nadir[k] - utopia[k] || 1;
+      const term = scoringWeights[k] * Math.abs(m.props[k] - utopia[k]) / range;
+      terms[k] = term;
+      if (term > maxTerm) { maxTerm = term; worstProp = k; }
+    });
+    return { idx: i, mol: m, score: maxTerm, terms, worstProp };
+  }).sort((a, b) => a.score - b.score);
+}
+
+function renderScoringView(container) {
+  const keys = ['MW', 'LogP', 'HBD', 'HBA', 'TPSA', 'RotBonds'];
+  const keyLabels = { MW: 'Mol Weight', LogP: 'cLogP', HBD: 'H-Bond Donors', HBA: 'H-Bond Acceptors', TPSA: 'TPSA', RotBonds: 'Rot. Bonds' };
+
+  // Profile buttons
+  let profileBtns = '<div class="scoring-profiles">';
+  for (const [pname, pdef] of Object.entries(SCORING_PROFILES)) {
+    profileBtns += `<button class="profile-btn ${currentProfile===pname?'active':''}" onclick="setProfile('${pname}')">${pdef.label}</button>`;
+  }
+  profileBtns += '</div>';
+
+  // Weight sliders
+  let sliders = '';
+  keys.forEach(k => {
+    sliders += `<div class="weight-slider-row">
+      <label>${keyLabels[k]}</label>
+      <input type="range" min="0" max="1" step="0.05" value="${scoringWeights[k]}" oninput="updateWeight('${k}', this.value)">
+      <span class="weight-val">${scoringWeights[k].toFixed(2)}</span>
+    </div>`;
+  });
+
+  // Compute scores
+  const ranked = computeScores();
+  const maxScore = ranked.length > 0 ? ranked[ranked.length - 1].score : 1;
+
+  // Rank list
+  let rankList = '';
+  ranked.forEach((r, ri) => {
+    const pct = maxScore > 0 ? (1 - r.score / maxScore) * 100 : 100;
+    const barColor = ri === 0 ? '#22c55e' : r.mol.paretoRank === 1 ? '#6366f1' : '#ef4444';
+    // Find strengths (lowest terms) and weaknesses (highest terms)
+    const sortedTerms = Object.entries(r.terms).sort((a, b) => a[1] - b[1]);
+    const strength = sortedTerms[0][0];
+    const weakness = sortedTerms[sortedTerms.length - 1][0];
+
+    rankList += `<div class="scoring-rank-item ${r.mol.paretoRank===1?'is-pareto':''}">
+      <div class="scoring-rank-num">#${ri + 1}</div>
+      <div class="scoring-rank-info">
+        <div class="rank-name">${r.mol.name} ${r.mol.paretoRank===1?'<span style="color:var(--green);font-size:10px">● pareto</span>':''}</div>
+        <div class="rank-bar-wrap"><div class="rank-bar-fill" style="width:${Math.max(pct,3)}%;background:${barColor}"></div></div>
+        <div class="rank-detail">best: ${strength} · worst: ${weakness}</div>
+      </div>
+      <div class="scoring-rank-score" style="color:${ri===0?'var(--green)':'var(--text)'}">${r.score.toFixed(3)}</div>
+    </div>`;
+  });
+
+  container.innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">🎯 Scoring Profiles</div>
+          <div class="panel-subtitle">weighted Chebyshev scalarization — lower score = closer to ideal</div>
+        </div>
+      </div>
+      ${profileBtns}
+      <div style="padding:12px;background:var(--surface2);border-radius:8px;margin-bottom:16px">
+        ${sliders}
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:12px">
+        Score = max<sub>i</sub>(w<sub>i</sub> × |f<sub>i</sub> − f<sub>i</sub>*| / range<sub>i</sub>). Lower = more balanced across weighted objectives. The #1 molecule is the best compromise under your current weights.
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Ranked Molecules</div>
+        <div class="panel-subtitle">${ranked.length} molecules · profile: ${SCORING_PROFILES[currentProfile].label}</div>
+      </div>
+      <div class="scoring-rank-list">${rankList}</div>
+    </div>
+  `;
 }
 
 // ---- Utilities ----
