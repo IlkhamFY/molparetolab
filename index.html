@@ -1845,7 +1845,7 @@ function getFilterAnnotations(xKey, yKey) {
   for (const [fname, fdef] of Object.entries(DRUG_FILTERS)) {
     if (!activeFilters.has(fname)) continue;
 
-    const colorMap = { green: '#22c55e', yellow: '#eab308', cyan: '#06b6d4', pink: '#ec4899', orange: '#f97316' };
+    const colorMap = { green: '#71717a', yellow: '#eab308', cyan: '#06b6d4', pink: '#ec4899', orange: '#f97316' };
     const color = colorMap[fdef.color] || '#8888a0';
 
     for (const rule of fdef.rules) {
@@ -1953,8 +1953,8 @@ function buildScatterChart(canvas, xKey, yKey, chartIdx) {
       label: 'Pareto Front',
       data: paretoMols,
       type: 'line',
-      borderColor: 'rgba(20,184,166,0.8)',
-      borderWidth: 2,
+      borderColor: 'rgba(255,255,255,0.25)',
+      borderWidth: 1.5,
       borderDash: [6, 3],
       pointRadius: 0,
       fill: false,
@@ -2038,7 +2038,7 @@ function renderParetoView(container) {
     <div class="legend-inline" style="margin-bottom:12px">
       <div class="legend-item"><span class="legend-dot" style="background:#22c55e"></span> Ro5 Pass</div>
       <div class="legend-item"><span class="legend-dot" style="background:#ef4444;border-radius:0;clip-path:polygon(50% 0%,100% 100%,0% 100%)"></span> Ro5 Fail</div>
-      <div class="legend-item"><span class="legend-line" style="background:#14b8a6;border-top:2px dashed #14b8a6;background:none"></span> Pareto Front</div>
+      <div class="legend-item"><span class="legend-line" style="background:rgba(255,255,255,0.25);border-top:2px dashed #14b8a6;background:none"></span> Pareto Front</div>
     </div>
     <div class="row" style="flex-wrap:wrap">`;
 
