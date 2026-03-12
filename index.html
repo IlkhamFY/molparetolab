@@ -6,6 +6,7 @@
 <title>MolParetoLab - Multi-Objective Molecule Analysis</title>
 <script src="https://cdn.jsdelivr.net/npm/@rdkit/rdkit@2025.3.4-1.0.0/dist/index.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
 <style>
 :root {
   --bg: #0a0a0f;
@@ -397,6 +398,58 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
 .empty-state h3 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
 .empty-state p { font-size: 13px; max-width: 400px; line-height: 1.6; }
 
+/* Axis selectors */
+.axis-selectors {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.axis-selectors select {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.axis-selectors select:hover { border-color: var(--accent); }
+.axis-selectors select:focus { border-color: var(--accent); }
+
+.legend-inline {
+  display: flex;
+  gap: 14px;
+  font-size: 11px;
+  color: var(--text2);
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.legend-inline .legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend-inline .legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.legend-inline .legend-line {
+  width: 16px;
+  height: 2px;
+  display: inline-block;
+}
+
 /* Responsive */
 @media (max-width: 900px) {
   .main { grid-template-columns: 1fr; }
@@ -778,18 +831,179 @@ function renderContent() {
 
 function switchView(v) { currentView = v; renderContent(); }
 
-function renderParetoView(container) {
-  const propPairs = [
-    ['MW', 'LogP'], ['MW', 'TPSA'], ['LogP', 'TPSA'],
-    ['HBD', 'HBA'], ['MW', 'RotBonds'], ['LogP', 'FrCSP3'],
-  ];
+// ---- v2: Track scatter chart axis state ----
+const scatterAxes = [
+  { x: 'MW', y: 'LogP' },
+  { x: 'MW', y: 'TPSA' },
+  { x: 'LogP', y: 'TPSA' },
+  { x: 'HBD', y: 'HBA' },
+  { x: 'MW', y: 'RotBonds' },
+  { x: 'LogP', y: 'FrCSP3' },
+];
 
-  let html = '<div class="row" style="flex-wrap:wrap">';
-  propPairs.forEach(([xKey, yKey], idx) => {
+function changeAxis(chartIdx, axis, value) {
+  scatterAxes[chartIdx][axis] = value;
+  renderContent(); // re-render to update chart
+}
+
+function buildScatterChart(canvas, xKey, yKey, chartIdx) {
+  const datasets = [];
+
+  // Lipinski pass/fail coloring
+  const passData = molecules.filter(m => m.lipinski.pass).map(m => ({
+    x: m.props[xKey], y: m.props[yKey], label: m.name,
+    pareto: m.paretoRank === 1,
+  }));
+  const failData = molecules.filter(m => !m.lipinski.pass).map(m => ({
+    x: m.props[xKey], y: m.props[yKey], label: m.name,
+    pareto: m.paretoRank === 1,
+  }));
+
+  datasets.push({
+    label: 'Ro5 Pass', data: passData,
+    backgroundColor: 'rgba(34,197,94,0.7)', borderColor: '#22c55e',
+    pointRadius: 6, pointHoverRadius: 8, pointStyle: 'circle',
+  });
+  datasets.push({
+    label: 'Ro5 Fail', data: failData,
+    backgroundColor: 'rgba(239,68,68,0.7)', borderColor: '#ef4444',
+    pointRadius: 6, pointHoverRadius: 8, pointStyle: 'triangle',
+  });
+
+  // Pareto front line — connect non-dominated points sorted by x
+  const paretoMols = molecules.filter(m => m.paretoRank === 1)
+    .map(m => ({ x: m.props[xKey], y: m.props[yKey], label: m.name }))
+    .sort((a, b) => a.x - b.x);
+
+  if (paretoMols.length >= 2) {
+    datasets.push({
+      label: 'Pareto Front',
+      data: paretoMols,
+      type: 'line',
+      borderColor: 'rgba(99,102,241,0.8)',
+      borderWidth: 2,
+      borderDash: [6, 3],
+      pointRadius: 0,
+      fill: false,
+      tension: 0,
+      order: -1,
+    });
+  }
+
+  // Selected molecule highlight
+  if (selectedMolIdx !== null) {
+    datasets.push({
+      label: 'Selected', data: [{
+        x: molecules[selectedMolIdx].props[xKey],
+        y: molecules[selectedMolIdx].props[yKey],
+        label: molecules[selectedMolIdx].name,
+      }],
+      backgroundColor: '#818cf8', borderColor: '#fff',
+      borderWidth: 2, pointRadius: 10, pointHoverRadius: 12,
+    });
+  }
+
+  // Lipinski threshold annotations
+  const xProp = PROPERTIES.find(p => p.key === xKey);
+  const yProp = PROPERTIES.find(p => p.key === yKey);
+  const annotations = {};
+
+  if (xProp && xProp.lipinski && xProp.lipinski.max) {
+    annotations.xThreshold = {
+      type: 'line',
+      scaleID: 'x',
+      value: xProp.lipinski.max,
+      borderColor: 'rgba(239,68,68,0.6)',
+      borderWidth: 2,
+      borderDash: [8, 4],
+      label: {
+        display: true,
+        content: `${xKey} ≤ ${xProp.lipinski.max}`,
+        position: 'start',
+        backgroundColor: 'rgba(239,68,68,0.15)',
+        color: '#ef4444',
+        font: { size: 10 },
+        padding: 3,
+      },
+    };
+  }
+  if (yProp && yProp.lipinski && yProp.lipinski.max) {
+    annotations.yThreshold = {
+      type: 'line',
+      scaleID: 'y',
+      value: yProp.lipinski.max,
+      borderColor: 'rgba(239,68,68,0.6)',
+      borderWidth: 2,
+      borderDash: [8, 4],
+      label: {
+        display: true,
+        content: `${yKey} ≤ ${yProp.lipinski.max}`,
+        position: 'start',
+        backgroundColor: 'rgba(239,68,68,0.15)',
+        color: '#ef4444',
+        font: { size: 10 },
+        padding: 3,
+      },
+    };
+  }
+
+  new Chart(canvas, {
+    type: 'scatter',
+    data: { datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => {
+              const d = ctx.raw;
+              return `${d.label}: ${xKey}=${d.x.toFixed(1)}, ${yKey}=${d.y.toFixed(1)}`;
+            }
+          }
+        },
+        annotation: { annotations },
+      },
+      scales: {
+        x: {
+          title: { display: true, text: xKey, color: '#8888a0' },
+          grid: { color: 'rgba(42,42,58,0.5)' },
+          ticks: { color: '#8888a0' },
+        },
+        y: {
+          title: { display: true, text: yKey, color: '#8888a0' },
+          grid: { color: 'rgba(42,42,58,0.5)' },
+          ticks: { color: '#8888a0' },
+        },
+      },
+    }
+  });
+}
+
+function renderParetoView(container) {
+  // Build property options for dropdowns
+  const propOptions = PROPERTIES.map(p => `<option value="${p.key}">${p.label} (${p.key})</option>`).join('');
+
+  let html = `
+    <div class="legend-inline" style="margin-bottom:12px">
+      <div class="legend-item"><span class="legend-dot" style="background:#22c55e"></span> Ro5 Pass</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#ef4444;border-radius:0;clip-path:polygon(50% 0%,100% 100%,0% 100%)"></span> Ro5 Fail</div>
+      <div class="legend-item"><span class="legend-line" style="background:#6366f1;border-top:2px dashed #6366f1;background:none"></span> Pareto Front</div>
+      <div class="legend-item"><span class="legend-line" style="border-top:2px dashed #ef4444;background:none"></span> Lipinski Threshold</div>
+    </div>
+    <div class="row" style="flex-wrap:wrap">`;
+
+  scatterAxes.forEach((axes, idx) => {
+    const xSel = propOptions.replace(`value="${axes.x}"`, `value="${axes.x}" selected`);
+    const ySel = propOptions.replace(`value="${axes.y}"`, `value="${axes.y}" selected`);
+
     html += `<div class="panel" style="flex:1;min-width:300px">
       <div class="panel-header">
-        <div class="panel-title">${xKey} vs ${yKey}</div>
-        <div class="panel-subtitle">pareto front</div>
+        <div class="panel-title" style="font-size:13px">${axes.x} vs ${axes.y}</div>
+        <div class="axis-selectors">
+          <label>X: <select onchange="changeAxis(${idx},'x',this.value)">${xSel}</select></label>
+          <label>Y: <select onchange="changeAxis(${idx},'y',this.value)">${ySel}</select></label>
+        </div>
       </div>
       <div class="chart-container"><canvas id="scatter_${idx}"></canvas></div>
     </div>`;
@@ -797,78 +1011,9 @@ function renderParetoView(container) {
   html += '</div>';
   container.innerHTML = html;
 
-  propPairs.forEach(([xKey, yKey], idx) => {
+  scatterAxes.forEach((axes, idx) => {
     const canvas = document.getElementById(`scatter_${idx}`);
-    const datasets = [];
-
-    // Non-dominated
-    const paretoData = molecules.filter(m => m.paretoRank === 1).map(m => ({
-      x: m.props[xKey], y: m.props[yKey], label: m.name
-    }));
-    // Dominated
-    const domData = molecules.filter(m => m.paretoRank !== 1).map(m => ({
-      x: m.props[xKey], y: m.props[yKey], label: m.name
-    }));
-    // Selected
-    const selData = selectedMolIdx !== null ? [{
-      x: molecules[selectedMolIdx].props[xKey],
-      y: molecules[selectedMolIdx].props[yKey],
-      label: molecules[selectedMolIdx].name
-    }] : [];
-
-    datasets.push({
-      label: 'Pareto', data: paretoData,
-      backgroundColor: 'rgba(34,197,94,0.7)', borderColor: '#22c55e',
-      pointRadius: 6, pointHoverRadius: 8,
-    });
-    datasets.push({
-      label: 'Dominated', data: domData,
-      backgroundColor: 'rgba(136,136,160,0.4)', borderColor: '#8888a0',
-      pointRadius: 5, pointHoverRadius: 7,
-    });
-    if (selData.length) {
-      datasets.push({
-        label: 'Selected', data: selData,
-        backgroundColor: '#6366f1', borderColor: '#fff',
-        borderWidth: 2, pointRadius: 9, pointHoverRadius: 11,
-      });
-    }
-
-    // Add Lipinski limits
-    const xProp = PROPERTIES.find(p => p.key === xKey);
-    const yProp = PROPERTIES.find(p => p.key === yKey);
-
-    new Chart(canvas, {
-      type: 'scatter',
-      data: { datasets },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: (ctx) => {
-                const d = ctx.raw;
-                return `${d.label}: ${xKey}=${d.x.toFixed(1)}, ${yKey}=${d.y.toFixed(1)}`;
-              }
-            }
-          },
-          annotation: undefined,
-        },
-        scales: {
-          x: {
-            title: { display: true, text: xKey, color: '#8888a0' },
-            grid: { color: 'rgba(42,42,58,0.5)' },
-            ticks: { color: '#8888a0' },
-          },
-          y: {
-            title: { display: true, text: yKey, color: '#8888a0' },
-            grid: { color: 'rgba(42,42,58,0.5)' },
-            ticks: { color: '#8888a0' },
-          },
-        },
-      }
-    });
+    buildScatterChart(canvas, axes.x, axes.y, idx);
   });
 }
 
