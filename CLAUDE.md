@@ -45,7 +45,7 @@ index.html
 6. Compute Pareto ranks + dominance relationships
 7. Render all views
 
-### Tab Views (9 tabs)
+### Tab Views (10 tabs)
 | Tab | Renderer | Engine |
 |-----|----------|--------|
 | Pareto Scatter | `renderParetoView` | Chart.js scatter × 6 |
@@ -54,7 +54,7 @@ index.html
 | Parallel | `renderParallelView` + `drawParallelCoords` | Canvas 2D |
 | Properties | `renderTableView` | HTML table |
 | Dominance | `renderDominanceView` | HTML grid |
-| Similarity | `renderSimilarityView` | Canvas 2D heatmap |
+| Similarity | `renderSimilarityView` + `drawSimHeatmap` | Canvas 2D heatmap + activity cliffs |
 | Scoring | `renderScoringView` | HTML + computed ranks |
 | Compare | `renderCompareView` | Chart.js bar + HTML |
 
