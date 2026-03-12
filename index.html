@@ -1137,6 +1137,120 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
   text-align: right;
 }
 
+/* Similarity heatmap */
+.sim-heatmap-container {
+  position: relative;
+  overflow-x: auto;
+}
+
+.sim-diversity-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: var(--surface2);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.sim-diversity-score {
+  font-size: 32px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.sim-pair {
+  display: grid;
+  grid-template-columns: 80px 1fr 80px 60px;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+
+.sim-pair .pair-svgs {
+  display: flex;
+  gap: 4px;
+}
+
+.sim-pair .pair-svgs svg { max-width: 70px; max-height: 50px; }
+
+.sim-pair .pair-info .pair-names {
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.sim-pair .pair-info .pair-detail {
+  font-size: 10px;
+  color: var(--text2);
+}
+
+.sim-pair .pair-score {
+  font-size: 16px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  text-align: right;
+}
+
+/* Activity cliffs */
+.cliff-item {
+  display: grid;
+  grid-template-columns: 160px 1fr 80px;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+
+.cliff-item .cliff-svgs {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.cliff-item .cliff-svgs svg { max-width: 70px; max-height: 50px; }
+
+.cliff-item .cliff-info .cliff-names {
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 3px;
+}
+
+.cliff-item .cliff-info .cliff-detail {
+  font-size: 10px;
+  color: var(--text2);
+  line-height: 1.5;
+}
+
+.cliff-bar {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.cliff-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--yellow), var(--red));
+}
+
+.cliff-item .cliff-score {
+  font-size: 18px;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  text-align: right;
+  color: var(--orange);
+}
+
 .stat-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -1521,9 +1635,16 @@ function doAnalysis(input) {
 
       const numAtoms = (desc.NumHeavyAtoms || desc.HeavyAtomCount || 0) + (desc.NumHs || 0);
 
+      // Compute Morgan fingerprint (radius 2, 2048 bits)
+      let fingerprint = '';
+      try {
+        fingerprint = mol.get_morgan_fp(JSON.stringify({radius: 2, nBits: 2048}));
+      } catch(e) { /* some molecules may fail */ }
+
       molecules.push({
         name, smiles,
         svg,
+        fingerprint,
         props: {
           MW: desc.exactmw || desc.amw || 0,
           LogP: desc.CrippenClogP || 0,
@@ -1751,6 +1872,7 @@ function renderContent() {
       <button class="tab ${currentView==='parallel'?'active':''}" onclick="switchView('parallel')">📏 Parallel</button>
       <button class="tab ${currentView==='table'?'active':''}" onclick="switchView('table')">Properties</button>
       <button class="tab ${currentView==='dominance'?'active':''}" onclick="switchView('dominance')">Dominance</button>
+      <button class="tab ${currentView==='similarity'?'active':''}" onclick="switchView('similarity')">🧬 Similarity</button>
       <button class="tab ${currentView==='scoring'?'active':''}" onclick="switchView('scoring')">🎯 Scoring</button>
       <button class="tab ${currentView==='compare'?'active':''}" onclick="switchView('compare')">🔬 Compare${compareIndices.length===2?' (2)':''}</button>
     </div>
@@ -1765,6 +1887,7 @@ function renderContent() {
   else if (currentView === 'parallel') renderParallelView(container);
   else if (currentView === 'table') renderTableView(container);
   else if (currentView === 'dominance') renderDominanceView(container);
+  else if (currentView === 'similarity') renderSimilarityView(container);
   else if (currentView === 'scoring') renderScoringView(container);
   else if (currentView === 'compare') renderCompareView(container);
 }
@@ -2147,11 +2270,13 @@ function drawBoiledEgg() {
     return ((logp - cx) ** 2) / (rx ** 2) + ((tpsa - cy) ** 2) / (ry ** 2) <= 1;
   }
 
-  // Plot molecules
+  // Plot molecules — store positions for hover
+  const eggMolPositions = [];
   molecules.forEach((m, i) => {
     const logp = m.props.LogP;
     const tpsa = m.props.TPSA;
     const [px, py] = toPixel(logp, tpsa);
+    eggMolPositions.push({ idx: i, px, py });
 
     // Determine zone
     const inYolk = insideEllipse(logp, tpsa, yolkCx, yolkCy, yolkRx, yolkRy);
@@ -2192,6 +2317,26 @@ function drawBoiledEgg() {
     ctx.textAlign = 'center';
     ctx.fillText(m.name.length > 12 ? m.name.slice(0, 10) + '…' : m.name, px, py - 10);
   });
+
+  // Hover tooltip on BOILED-Egg
+  canvas.onmousemove = (e) => {
+    const cr = canvas.getBoundingClientRect();
+    const mx = e.clientX - cr.left;
+    const my = e.clientY - cr.top;
+    let bestDist = 20, bestIdx = -1;
+    eggMolPositions.forEach(({ idx, px, py }) => {
+      const d = Math.sqrt((mx - px) ** 2 + (my - py) ** 2);
+      if (d < bestDist) { bestDist = d; bestIdx = idx; }
+    });
+    if (bestIdx >= 0) {
+      showMolTooltip(bestIdx, e.clientX, e.clientY, 'LogP', 'TPSA');
+      canvas.style.cursor = 'pointer';
+    } else {
+      hideMolTooltip();
+      canvas.style.cursor = 'default';
+    }
+  };
+  canvas.onmouseleave = () => hideMolTooltip();
 
   // Axes
   ctx.strokeStyle = '#4a4a5a';
@@ -2462,12 +2607,16 @@ function renderRadarView(container) {
     </div>
   `;
 
-  new Chart(document.getElementById('radarChart'), {
+  const radarCanvas = document.getElementById('radarChart');
+  const radarInstance = new Chart(radarCanvas, {
     type: 'radar',
     data: { labels, datasets },
     options: {
       responsive: true, maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: '#8888a0', font: { size: 11 } } } },
+      plugins: {
+        legend: { labels: { color: '#8888a0', font: { size: 11 } } },
+        tooltip: { enabled: false },
+      },
       scales: {
         r: {
           grid: { color: 'rgba(42,42,58,0.5)' },
@@ -2476,9 +2625,22 @@ function renderRadarView(container) {
           ticks: { color: '#8888a0', backdropColor: 'transparent' },
           suggestedMin: 0, suggestedMax: 1.2,
         }
-      }
+      },
+      onHover: (event) => {
+        const points = radarInstance.getElementsAtEventForMode(event, 'nearest', { intersect: false }, false);
+        if (points.length > 0) {
+          const pt = points[0];
+          const molIdx = pt.datasetIndex; // each dataset = one molecule
+          if (molIdx < molecules.length) {
+            showMolTooltip(molIdx, event.native.clientX, event.native.clientY, 'MW', 'LogP');
+          }
+        } else {
+          hideMolTooltip();
+        }
+      },
     }
   });
+  radarCanvas.addEventListener('mouseleave', hideMolTooltip);
 }
 
 function renderTableView(container) {
@@ -2581,6 +2743,264 @@ function renderDominanceView(container) {
   html += '</div>';
 
   container.innerHTML = html;
+}
+
+// ---- Tanimoto Similarity ----
+function tanimotoSimilarity(fp1, fp2) {
+  if (!fp1 || !fp2 || fp1.length !== fp2.length) return 0;
+  let intersection = 0, union = 0;
+  for (let i = 0; i < fp1.length; i++) {
+    const a = fp1[i] === '1', b = fp2[i] === '1';
+    if (a && b) intersection++;
+    if (a || b) union++;
+  }
+  return union === 0 ? 0 : intersection / union;
+}
+
+function computeSimilarityMatrix() {
+  const n = molecules.length;
+  const matrix = Array.from({ length: n }, () => new Float64Array(n));
+  for (let i = 0; i < n; i++) {
+    matrix[i][i] = 1.0;
+    for (let j = i + 1; j < n; j++) {
+      const sim = tanimotoSimilarity(molecules[i].fingerprint, molecules[j].fingerprint);
+      matrix[i][j] = sim;
+      matrix[j][i] = sim;
+    }
+  }
+  return matrix;
+}
+
+function computeActivityCliffs(matrix) {
+  const n = molecules.length;
+  const lipinskiMax = { MW: 500, LogP: 5, HBD: 5, HBA: 10, TPSA: 140, RotBonds: 10 };
+  const keys = Object.keys(lipinskiMax);
+  const cliffs = [];
+
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const sim = matrix[i][j];
+      if (sim <= 0.5) continue;
+      // Euclidean distance across normalized properties
+      let sumSq = 0;
+      const diffs = {};
+      keys.forEach(k => {
+        const norm_i = molecules[i].props[k] / lipinskiMax[k];
+        const norm_j = molecules[j].props[k] / lipinskiMax[k];
+        const d = Math.abs(norm_i - norm_j);
+        sumSq += d * d;
+        diffs[k] = d;
+      });
+      const propDist = Math.sqrt(sumSq);
+      const cliffScore = sim * propDist;
+      // Find top differing properties
+      const sortedDiffs = Object.entries(diffs).sort((a, b) => b[1] - a[1]);
+      cliffs.push({ i, j, sim, propDist, cliffScore, topDiffs: sortedDiffs.slice(0, 3) });
+    }
+  }
+  return cliffs.sort((a, b) => b.cliffScore - a.cliffScore).slice(0, 5);
+}
+
+function simColor(val) {
+  // 0=dark blue → 0.3=cyan → 0.5=green → 0.7=yellow → 1.0=red
+  if (val <= 0.3) {
+    const t = val / 0.3;
+    return `rgb(${Math.round(0 + t * 0)}, ${Math.round(40 + t * 140)}, ${Math.round(120 + t * 100)})`;
+  } else if (val <= 0.5) {
+    const t = (val - 0.3) / 0.2;
+    return `rgb(${Math.round(0 + t * 34)}, ${Math.round(180 + t * 17)}, ${Math.round(220 - t * 126)})`;
+  } else if (val <= 0.7) {
+    const t = (val - 0.5) / 0.2;
+    return `rgb(${Math.round(34 + t * 200)}, ${Math.round(197 + t * 36)}, ${Math.round(94 - t * 86)})`;
+  } else {
+    const t = (val - 0.7) / 0.3;
+    return `rgb(${Math.round(234 + t * 5)}, ${Math.round(233 - t * 164)}, ${Math.round(8 - t * 8)})`;
+  }
+}
+
+function renderSimilarityView(container) {
+  const n = molecules.length;
+  if (n < 2) {
+    container.innerHTML = '<div class="panel" style="text-align:center;padding:40px"><p style="color:var(--text2)">Need at least 2 molecules for similarity analysis</p></div>';
+    return;
+  }
+
+  const matrix = computeSimilarityMatrix();
+
+  // Diversity score: average (1 - sim) across all pairs
+  let totalDist = 0, pairCount = 0;
+  const topPairs = [];
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      totalDist += (1 - matrix[i][j]);
+      pairCount++;
+      topPairs.push({ i, j, sim: matrix[i][j] });
+    }
+  }
+  const diversity = pairCount > 0 ? totalDist / pairCount : 0;
+  topPairs.sort((a, b) => b.sim - a.sim);
+  const top5 = topPairs.slice(0, 5);
+
+  // Activity cliffs
+  const cliffs = computeActivityCliffs(matrix);
+
+  // Diversity card
+  let html = `<div class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">🧬 Tanimoto Similarity</div>
+        <div class="panel-subtitle">Morgan fingerprints (radius 2, 2048 bits) — pairwise structural similarity</div>
+      </div>
+    </div>
+    <div class="sim-diversity-card">
+      <div>
+        <div class="sim-diversity-score" style="color:${diversity > 0.6 ? 'var(--green)' : diversity > 0.3 ? 'var(--yellow)' : 'var(--red)'}">${diversity.toFixed(3)}</div>
+        <div style="font-size:11px;color:var(--text2)">Chemical Diversity</div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.6">
+        Average pairwise Tanimoto distance (1 − similarity) across all ${pairCount} pairs.<br>
+        ${diversity > 0.7 ? 'Highly diverse set — good chemical space coverage.' : diversity > 0.4 ? 'Moderate diversity — some structural clusters.' : 'Low diversity — molecules are structurally similar.'}
+      </div>
+    </div>`;
+
+  // Heatmap (Canvas)
+  html += `<div class="sim-heatmap-container" style="margin-bottom:20px">
+      <canvas id="simHeatmap" style="width:100%;max-width:${Math.max(n * 60, 300)}px;height:${Math.max(n * 50 + 60, 200)}px"></canvas>
+    </div>`;
+
+  // Most similar pairs
+  html += `<div style="margin-top:16px"><div style="font-size:13px;font-weight:600;margin-bottom:8px">Most Similar Pairs</div>`;
+  top5.forEach(p => {
+    const m1 = molecules[p.i], m2 = molecules[p.j];
+    html += `<div class="sim-pair">
+      <div class="pair-svgs">${m1.svg}</div>
+      <div class="pair-info">
+        <div class="pair-names">${m1.name} ↔ ${m2.name}</div>
+        <div class="pair-detail">Tanimoto: ${p.sim.toFixed(3)}</div>
+      </div>
+      <div class="pair-svgs">${m2.svg}</div>
+      <div class="pair-score" style="color:${p.sim > 0.7 ? 'var(--red)' : p.sim > 0.4 ? 'var(--yellow)' : 'var(--green)'}">${p.sim.toFixed(3)}</div>
+    </div>`;
+  });
+  html += '</div></div>';
+
+  // Activity Cliffs
+  html += `<div class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">⚡ Activity Cliffs</div>
+        <div class="panel-subtitle">structurally similar (Tanimoto > 0.5) but with large property differences — key SAR insights</div>
+      </div>
+    </div>`;
+
+  if (cliffs.length === 0) {
+    html += '<div style="text-align:center;padding:24px;color:var(--text2);font-size:13px">No activity cliffs detected (no pairs with Tanimoto > 0.5 and significant property differences)</div>';
+  } else {
+    const maxCliff = cliffs[0].cliffScore;
+    cliffs.forEach((c, ci) => {
+      const m1 = molecules[c.i], m2 = molecules[c.j];
+      const pct = maxCliff > 0 ? (c.cliffScore / maxCliff * 100) : 0;
+      const diffText = c.topDiffs.map(([k, d]) => `${k}: ${d.toFixed(2)}`).join(', ');
+      html += `<div class="cliff-item">
+        <div class="cliff-svgs">${m1.svg}<span style="color:var(--text2);font-size:16px;padding:0 2px">↔</span>${m2.svg}</div>
+        <div class="cliff-info">
+          <div class="cliff-names">${m1.name} vs ${m2.name}</div>
+          <div class="cliff-detail">Tanimoto: ${c.sim.toFixed(3)} | Property distance: ${c.propDist.toFixed(3)}</div>
+          <div class="cliff-detail">Biggest differences: ${diffText}</div>
+          <div class="cliff-bar"><div class="cliff-bar-fill" style="width:${Math.max(pct, 3)}%"></div></div>
+        </div>
+        <div class="cliff-score">${c.cliffScore.toFixed(3)}</div>
+      </div>`;
+    });
+  }
+  html += '</div>';
+
+  container.innerHTML = html;
+
+  // Draw heatmap
+  drawSimHeatmap(matrix);
+}
+
+function drawSimHeatmap(matrix) {
+  const canvas = document.getElementById('simHeatmap');
+  if (!canvas) return;
+
+  const n = molecules.length;
+  const cellSize = Math.min(50, Math.max(30, 400 / n));
+  const labelW = 80;
+  const W = labelW + n * cellSize + 10;
+  const H = 40 + n * cellSize + 10;
+
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  // Background
+  ctx.fillStyle = '#12121a';
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw cells
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      const val = matrix[i][j];
+      const x = labelW + j * cellSize;
+      const y = 40 + i * cellSize;
+
+      ctx.fillStyle = i === j ? '#2a2a3a' : simColor(val);
+      ctx.fillRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
+
+      // Show value in cell if small matrix
+      if (n <= 10) {
+        ctx.font = `${Math.min(11, cellSize * 0.3)}px JetBrains Mono, monospace`;
+        ctx.fillStyle = val > 0.6 ? '#000' : '#ccc';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(i === j ? '1.0' : val.toFixed(2), x + cellSize / 2, y + cellSize / 2);
+      }
+    }
+  }
+
+  // Row labels (left)
+  ctx.font = '10px Inter, sans-serif';
+  ctx.fillStyle = '#8888a0';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i < n; i++) {
+    const name = molecules[i].name.length > 10 ? molecules[i].name.slice(0, 8) + '…' : molecules[i].name;
+    ctx.fillText(name, labelW - 6, 40 + i * cellSize + cellSize / 2);
+  }
+
+  // Column labels (top, rotated)
+  ctx.textAlign = 'left';
+  for (let j = 0; j < n; j++) {
+    const name = molecules[j].name.length > 10 ? molecules[j].name.slice(0, 8) + '…' : molecules[j].name;
+    ctx.save();
+    ctx.translate(labelW + j * cellSize + cellSize / 2, 36);
+    ctx.rotate(-Math.PI / 4);
+    ctx.fillText(name, 0, 0);
+    ctx.restore();
+  }
+
+  // Color scale legend
+  const legendX = labelW, legendY = 40 + n * cellSize + 6;
+  const legendW = n * cellSize;
+  for (let px = 0; px < legendW; px++) {
+    ctx.fillStyle = simColor(px / legendW);
+    ctx.fillRect(legendX + px, legendY, 1, 6);
+  }
+  ctx.font = '9px Inter, sans-serif';
+  ctx.fillStyle = '#8888a0';
+  ctx.textAlign = 'left';
+  ctx.fillText('0.0', legendX, legendY + 14);
+  ctx.textAlign = 'center';
+  ctx.fillText('0.5', legendX + legendW / 2, legendY + 14);
+  ctx.textAlign = 'right';
+  ctx.fillText('1.0', legendX + legendW, legendY + 14);
 }
 
 // ---- Parallel Coordinates View ----
