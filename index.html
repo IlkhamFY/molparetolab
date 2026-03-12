@@ -15,31 +15,31 @@
 <meta name="twitter:description" content="Paste SMILES, explore Pareto fronts across drug-likeness properties. BOILED-Egg BBB/GI plot. 100% client-side via RDKit WASM.">
 <meta name="twitter:image" content="https://molparetolab.ilkham.com/og-image.png">
 <script defer data-domain="molparetolab.ilkham.com" src="https://plausible.io/js/script.js"></script>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230a0a0f'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-family='system-ui' font-size='18' font-weight='700' fill='%236366f1'%3EMP%3C/text%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230a0a0f'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-family='system-ui' font-size='18' font-weight='700' fill='%2314b8a6'%3EMP%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@rdkit/rdkit@2025.3.4-1.0.0/dist/RDKit_minimal.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 <style>
 :root {
-  --bg: #0a0a0f;
-  --surface: #12121a;
-  --surface2: #1a1a25;
-  --border: #2a2a3a;
-  --text: #e0e0e8;
-  --text2: #8888a0;
-  --accent: #6366f1;
-  --accent2: #818cf8;
+  --bg: #09090b;
+  --surface: #111113;
+  --surface2: #18181b;
+  --border: #27272a;
+  --text: #e4e4e7;
+  --text2: #71717a;
+  --accent: #14b8a6;
+  --accent2: #2dd4bf;
   --green: #22c55e;
   --red: #ef4444;
   --yellow: #eab308;
   --orange: #f97316;
   --cyan: #06b6d4;
   --pink: #ec4899;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -78,7 +78,7 @@ body {
   font-size: 12px;
   padding: 4px 12px;
   border-radius: 12px;
-  background: rgba(99, 102, 241, 0.15);
+  background: rgba(20, 184, 166, 0.15);
   color: var(--accent2);
   font-weight: 600;
   display: none;
@@ -136,7 +136,7 @@ textarea {
   border: 1px solid var(--border);
   border-radius: 8px;
   color: var(--text);
-  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-family: 'Geist Mono', 'Fira Code', monospace;
   font-size: 13px;
   padding: 12px;
   resize: vertical;
@@ -335,7 +335,7 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
 }
 
 .mol-card:hover { border-color: var(--accent); }
-.mol-card.selected { border-color: var(--accent); background: rgba(99, 102, 241, 0.05); }
+.mol-card.selected { border-color: var(--accent); background: rgba(20, 184, 166, 0.05); }
 .mol-card.pareto { border-left: 3px solid var(--green); }
 .mol-card.compare-selected { border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan); }
 
@@ -398,7 +398,7 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
 
 .mol-badge.pass { background: rgba(34, 197, 94, 0.15); color: var(--green); }
 .mol-badge.fail { background: rgba(239, 68, 68, 0.15); color: var(--red); }
-.mol-badge.pareto-badge { background: rgba(99, 102, 241, 0.15); color: var(--accent2); }
+.mol-badge.pareto-badge { background: rgba(20, 184, 166, 0.15); color: var(--accent2); }
 
 /* Content panels */
 .panel {
@@ -480,9 +480,9 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
   border-bottom: 1px solid rgba(42, 42, 58, 0.5);
 }
 
-.prop-table tr:hover { background: rgba(99, 102, 241, 0.03); }
+.prop-table tr:hover { background: rgba(20, 184, 166, 0.03); }
 
-.prop-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+.prop-val { font-family: 'Geist Mono', monospace; font-size: 12px; }
 .prop-good { color: var(--green); }
 .prop-bad { color: var(--red); }
 .prop-warn { color: var(--yellow); }
@@ -652,7 +652,7 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
 
 .sdf-drop:hover, .sdf-drop.dragover {
   border-color: var(--accent);
-  background: rgba(99,102,241,0.05);
+  background: rgba(20,184,166,0.05);
   color: var(--text);
 }
 
@@ -721,7 +721,7 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
 }
 
 .filter-toggle:hover { border-color: var(--accent); color: var(--text); }
-.filter-toggle.active { background: rgba(99,102,241,0.15); border-color: var(--accent); color: var(--accent2); }
+.filter-toggle.active { background: rgba(20,184,166,0.15); border-color: var(--accent); color: var(--accent2); }
 
 .filter-toggle.active-green { background: rgba(34,197,94,0.15); border-color: var(--green); color: var(--green); }
 .filter-toggle.active-yellow { background: rgba(234,179,8,0.15); border-color: var(--yellow); color: var(--yellow); }
@@ -824,7 +824,7 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
 }
 
 .compare-prop-val {
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', monospace;
   font-size: 12px;
   text-align: center;
 }
@@ -919,7 +919,7 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
 .mol-hover-tooltip .tooltip-props {
   font-size: 11px;
   color: var(--text2);
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', monospace;
   text-align: center;
 }
 
@@ -1016,7 +1016,7 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
 
 .weight-slider-row .weight-val {
   font-size: 12px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', monospace;
   color: var(--accent2);
   text-align: right;
 }
@@ -1079,7 +1079,7 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
 .scoring-rank-score {
   font-size: 14px;
   font-weight: 600;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', monospace;
   text-align: right;
 }
 
@@ -1102,7 +1102,7 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
 .sim-diversity-score {
   font-size: 32px;
   font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', monospace;
 }
 
 .sim-pair {
@@ -1138,7 +1138,7 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
 .sim-pair .pair-score {
   font-size: 16px;
   font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', monospace;
   text-align: right;
 }
 
@@ -1192,7 +1192,7 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
 .cliff-item .cliff-score {
   font-size: 18px;
   font-weight: 700;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: 'Geist Mono', monospace;
   text-align: right;
   color: var(--orange);
 }
@@ -1363,7 +1363,7 @@ const PROPERTIES = [
   { key: 'NumAtoms', label: 'Atom Count', unit: '', direction: 'neutral' },
 ];
 
-const COLORS = ['#6366f1','#22c55e','#ef4444','#eab308','#06b6d4','#ec4899','#f97316','#8b5cf6','#14b8a6','#f43f5e','#84cc16','#a855f7'];
+const COLORS = ['#2dd4bf','#22c55e','#ef4444','#eab308','#06b6d4','#ec4899','#f97316','#8b5cf6','#a3e635','#f43f5e','#84cc16','#a855f7'];
 
 // ---- Drug-likeness filter definitions ----
 const DRUG_FILTERS = {
@@ -1950,7 +1950,7 @@ function buildScatterChart(canvas, xKey, yKey, chartIdx) {
       label: 'Pareto Front',
       data: paretoMols,
       type: 'line',
-      borderColor: 'rgba(99,102,241,0.8)',
+      borderColor: 'rgba(20,184,166,0.8)',
       borderWidth: 2,
       borderDash: [6, 3],
       pointRadius: 0,
@@ -1967,7 +1967,7 @@ function buildScatterChart(canvas, xKey, yKey, chartIdx) {
         y: molecules[selectedMolIdx].props[yKey],
         label: molecules[selectedMolIdx].name,
       }],
-      backgroundColor: '#818cf8', borderColor: '#fff',
+      backgroundColor: '#2dd4bf', borderColor: '#fff',
       borderWidth: 2, pointRadius: 10, pointHoverRadius: 12,
     });
   }
@@ -2035,7 +2035,7 @@ function renderParetoView(container) {
     <div class="legend-inline" style="margin-bottom:12px">
       <div class="legend-item"><span class="legend-dot" style="background:#22c55e"></span> Ro5 Pass</div>
       <div class="legend-item"><span class="legend-dot" style="background:#ef4444;border-radius:0;clip-path:polygon(50% 0%,100% 100%,0% 100%)"></span> Ro5 Fail</div>
-      <div class="legend-item"><span class="legend-line" style="background:#6366f1;border-top:2px dashed #6366f1;background:none"></span> Pareto Front</div>
+      <div class="legend-item"><span class="legend-line" style="background:#14b8a6;border-top:2px dashed #14b8a6;background:none"></span> Pareto Front</div>
     </div>
     <div class="row" style="flex-wrap:wrap">`;
 
@@ -2217,7 +2217,7 @@ function drawBoiledEgg() {
     if (i === selectedMolIdx) {
       ctx.beginPath();
       ctx.arc(px, py, 12, 0, Math.PI * 2);
-      ctx.strokeStyle = '#818cf8';
+      ctx.strokeStyle = '#2dd4bf';
       ctx.lineWidth = 2;
       ctx.stroke();
     }
@@ -2355,11 +2355,11 @@ function renderCompareView(container) {
 
     propRows += `
       <div class="compare-prop-row">
-        <div style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;${winner===1?'color:var(--green);font-weight:600':'color:var(--text)'}">${v1.toFixed(fmt)}</div>
+        <div style="text-align:right;font-family:'Geist Mono',monospace;font-size:12px;${winner===1?'color:var(--green);font-weight:600':'color:var(--text)'}">${v1.toFixed(fmt)}</div>
         <div class="compare-bar-visual"><div class="compare-bar-fill left" style="width:${pct1}%;background:${winner===1?'var(--green)':'var(--accent)'}80"></div></div>
         <div class="compare-prop-name" style="text-align:center;grid-column:span 2">${p.label}</div>
         <div class="compare-bar-visual"><div class="compare-bar-fill" style="width:${pct2}%;background:${winner===2?'var(--green)':'var(--cyan)'}80"></div></div>
-        <div style="text-align:left;font-family:'JetBrains Mono',monospace;font-size:12px;${winner===2?'color:var(--green);font-weight:600':'color:var(--text)'}">${v2.toFixed(fmt)}</div>
+        <div style="text-align:left;font-family:'Geist Mono',monospace;font-size:12px;${winner===2?'color:var(--green);font-weight:600':'color:var(--text)'}">${v2.toFixed(fmt)}</div>
       </div>
     `;
   });
@@ -2463,8 +2463,8 @@ function buildCompareBarChart(m1, m2, props) {
         {
           label: m1.name,
           data: props.map((p, i) => m1.props[p.key]),
-          backgroundColor: 'rgba(99, 102, 241, 0.7)',
-          borderColor: '#6366f1',
+          backgroundColor: 'rgba(20, 184, 166, 0.7)',
+          borderColor: '#14b8a6',
           borderWidth: 1,
         },
         {
@@ -2590,7 +2590,7 @@ function renderTableView(container) {
       </tr>`;
 
   molecules.forEach((m, i) => {
-    html += `<tr style="${i===selectedMolIdx ? 'background:rgba(99,102,241,0.08)' : ''}">
+    html += `<tr style="${i===selectedMolIdx ? 'background:rgba(20,184,166,0.08)' : ''}">
       <td><strong>${m.name}</strong></td>`;
     PROPERTIES.slice(0, 10).forEach(p => {
       const v = m.props[p.key];
@@ -3044,9 +3044,9 @@ function drawParallelCoords() {
     if (pcBrushes[k]) {
       const by1 = valToY(k, pcBrushes[k][1]);
       const by2 = valToY(k, pcBrushes[k][0]);
-      ctx.fillStyle = 'rgba(99,102,241,0.15)';
+      ctx.fillStyle = 'rgba(20,184,166,0.15)';
       ctx.fillRect(x - 10, by1, 20, by2 - by1);
-      ctx.strokeStyle = '#6366f1';
+      ctx.strokeStyle = '#14b8a6';
       ctx.lineWidth = 2;
       ctx.strokeRect(x - 10, by1, 20, by2 - by1);
     }
@@ -3071,10 +3071,10 @@ function drawParallelCoords() {
   sorted.filter(s => s.passes).forEach(({ m, i }) => {
     const isSelected = i === selectedMolIdx;
     const isPareto = m.paretoRank === 1;
-    ctx.strokeStyle = isSelected ? '#818cf8' : isPareto ? 'rgba(34,197,94,0.6)' : 'rgba(239,68,68,0.35)';
+    ctx.strokeStyle = isSelected ? '#2dd4bf' : isPareto ? 'rgba(34,197,94,0.6)' : 'rgba(239,68,68,0.35)';
     ctx.lineWidth = isSelected ? 3 : 1.5;
     if (isSelected) {
-      ctx.shadowColor = '#818cf8';
+      ctx.shadowColor = '#2dd4bf';
       ctx.shadowBlur = 8;
     }
     ctx.beginPath();
@@ -3220,7 +3220,7 @@ function renderScoringView(container) {
   let rankList = '';
   ranked.forEach((r, ri) => {
     const pct = maxScore > 0 ? (1 - r.score / maxScore) * 100 : 100;
-    const barColor = ri === 0 ? '#22c55e' : r.mol.paretoRank === 1 ? '#6366f1' : '#ef4444';
+    const barColor = ri === 0 ? '#22c55e' : r.mol.paretoRank === 1 ? '#14b8a6' : '#ef4444';
     // Find strengths (lowest terms) and weaknesses (highest terms)
     const sortedTerms = Object.entries(r.terms).sort((a, b) => a[1] - b[1]);
     const strength = sortedTerms[0][0];
