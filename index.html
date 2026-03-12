@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>MolParetoLab - Multi-Objective Molecule Analysis</title>
+<meta name="description" content="Paste SMILES or upload SDF files for instant multi-objective Pareto analysis across drug-likeness properties. Runs entirely client-side via RDKit WASM.">
+<meta property="og:title" content="MolParetoLab — Multi-Objective Molecule Analysis">
+<meta property="og:description" content="Explore Pareto fronts across drug-likeness properties. Paste SMILES, upload SDF, share via URL. 100% client-side.">
+<meta property="og:image" content="https://molparetolab.ilkham.com/og-image.png">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230a0a0f'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-family='system-ui' font-size='18' font-weight='700' fill='%236366f1'%3EMP%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,6 +17,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@rdkit/rdkit@2025.3.4-1.0.0/dist/RDKit_minimal.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
 <style>
 :root {
   --bg: #0a0a0f;
@@ -500,10 +507,121 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
   display: inline-block;
 }
 
+/* Hero section */
+.hero {
+  padding: 48px 32px 40px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, rgba(99,102,241,0.06) 0%, transparent 100%);
+}
+
+.hero h2 {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: -1px;
+  margin-bottom: 12px;
+}
+
+.hero h2 span { color: var(--accent2); }
+
+.hero p {
+  font-size: 15px;
+  color: var(--text2);
+  max-width: 640px;
+  margin: 0 auto 24px;
+  line-height: 1.7;
+}
+
+.hero-pills {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.hero-pill {
+  font-size: 12px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hero-pill .pill-icon { font-size: 14px; }
+
+/* SDF Upload */
+.sdf-drop {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.sdf-drop:hover, .sdf-drop.dragover {
+  border-color: var(--accent);
+  background: rgba(99,102,241,0.05);
+  color: var(--text);
+}
+
+.sdf-drop .drop-icon {
+  font-size: 20px;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.sdf-drop input[type="file"] { display: none; }
+
+/* Share button */
+.btn-share {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 8px 14px;
+  font-size: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-share:hover { border-color: var(--accent); color: var(--accent2); }
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--accent);
+  color: white;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 999;
+  transition: transform 0.3s ease;
+  pointer-events: none;
+}
+
+.toast.show { transform: translateX(-50%) translateY(0); }
+
 /* Responsive */
 @media (max-width: 900px) {
   .main { grid-template-columns: 1fr; }
   .sidebar { max-height: none; }
+  .hero { padding: 32px 20px 28px; }
+  .hero h2 { font-size: 24px; }
 }
 
 /* Scrollbar */
@@ -555,9 +673,25 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
   <div class="header-right">
     <span class="badge">RDKit.js WASM</span>
     <span class="badge">client-side</span>
+    <button class="btn-share" onclick="shareURL()" id="shareBtn" style="display:none">🔗 Share URL</button>
     <button class="btn btn-secondary" onclick="exportCSV()" id="exportBtn" style="display:none">Export CSV</button>
   </div>
 </div>
+
+<div class="hero" id="heroSection">
+  <h2>Multi-Objective <span>Pareto Analysis</span> for Molecules</h2>
+  <p>Paste SMILES or upload SDF files and instantly explore the Pareto frontier across drug-likeness properties. Identify non-dominated candidates, check Lipinski Ro5, compare dominance — all running client-side via RDKit WASM. No server, no installs, no data leaves your browser.</p>
+  <div class="hero-pills">
+    <div class="hero-pill"><span class="pill-icon">📊</span> Pareto Front Scatter</div>
+    <div class="hero-pill"><span class="pill-icon">🎯</span> Lipinski Ro5 Check</div>
+    <div class="hero-pill"><span class="pill-icon">🕸️</span> Radar Property View</div>
+    <div class="hero-pill"><span class="pill-icon">⚔️</span> Dominance Matrix</div>
+    <div class="hero-pill"><span class="pill-icon">📁</span> SDF File Upload</div>
+    <div class="hero-pill"><span class="pill-icon">🔗</span> Shareable URLs</div>
+  </div>
+</div>
+
+<div id="toast" class="toast"></div>
 
 <div class="main">
   <div class="sidebar">
@@ -583,6 +717,16 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
       <button class="example-btn" onclick="loadExample('kinase')">
         <span class="name">Kinase inhibitors</span> — imatinib family
       </button>
+    </div>
+
+    <div class="section-label" style="margin-top:16px">Upload SDF</div>
+    <div class="sdf-drop" id="sdfDrop" onclick="document.getElementById('sdfFile').click()"
+         ondragover="event.preventDefault();this.classList.add('dragover')"
+         ondragleave="this.classList.remove('dragover')"
+         ondrop="event.preventDefault();this.classList.remove('dragover');handleSDFDrop(event)">
+      <span class="drop-icon">📁</span>
+      Drag &amp; drop .sdf file or click to browse
+      <input type="file" id="sdfFile" accept=".sdf,.sd" onchange="handleSDFFile(this.files[0])">
     </div>
 
     <div class="mol-list" id="molList"></div>
@@ -835,6 +979,10 @@ function computeDominance() {
 
 // ---- Rendering ----
 function renderAll() {
+  if (molecules.length > 0) {
+    hideHero();
+    showShareBtn();
+  }
   renderMolList();
   renderContent();
 }
@@ -1255,8 +1403,141 @@ function sortTable(key) {
   renderAll();
 }
 
+// ---- SDF Parsing ----
+function handleSDFDrop(event) {
+  const file = event.dataTransfer.files[0];
+  if (file) handleSDFFile(file);
+}
+
+function handleSDFFile(file) {
+  if (!file) return;
+  if (!file.name.match(/\.(sdf|sd)$/i)) {
+    setStatus('please upload a .sdf file', 'error');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const sdfText = e.target.result;
+    const smilesLines = parseSDFtoSMILES(sdfText);
+    if (smilesLines.length === 0) {
+      setStatus('no valid molecules found in SDF', 'error');
+      return;
+    }
+    document.getElementById('smilesInput').value = smilesLines.join('\n');
+    setStatus(`loaded ${smilesLines.length} molecules from ${file.name}`, 'success');
+  };
+  reader.readAsText(file);
+}
+
+function parseSDFtoSMILES(sdfText) {
+  // Split SDF into individual molecule blocks (separated by $$$$)
+  const blocks = sdfText.split('$$$$').filter(b => b.trim());
+  const results = [];
+
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 4) continue;
+
+    // First line is molecule name (may be empty)
+    const molName = lines[0].trim() || '';
+
+    // Try to extract the molblock (everything up to M  END)
+    const endIdx = lines.findIndex(l => l.trim().startsWith('M  END'));
+    if (endIdx === -1) continue;
+
+    const molblock = lines.slice(0, endIdx + 1).join('\n');
+
+    try {
+      const mol = RDKitModule.get_mol(molblock);
+      if (mol && mol.is_valid()) {
+        const smiles = mol.get_smiles();
+        // Try to get name from SDF properties if molName is empty
+        let name = molName;
+        if (!name) {
+          // Look for > <Name> or > <MOLNAME> type fields
+          const nameMatch = block.match(/>\s*<(?:Name|MOLNAME|name|ID|_Name)>\s*\n([^\n]+)/i);
+          if (nameMatch) name = nameMatch[1].trim();
+        }
+        results.push(name ? `${smiles} ${name}` : smiles);
+        mol.delete();
+      }
+    } catch(e) {
+      // Skip invalid molecules silently
+    }
+  }
+  return results;
+}
+
+// ---- Shareable URLs ----
+function encodeURLState() {
+  // Compress all SMILES + names into a compact URL
+  const lines = molecules.map(m => `${m.smiles} ${m.name}`);
+  const payload = lines.join('\n');
+  const compressed = LZString.compressToEncodedURIComponent(payload);
+  return compressed;
+}
+
+function decodeURLState(compressed) {
+  try {
+    const payload = LZString.decompressFromEncodedURIComponent(compressed);
+    return payload || null;
+  } catch(e) {
+    return null;
+  }
+}
+
+function shareURL() {
+  if (!molecules.length) return;
+  const compressed = encodeURLState();
+  const url = new URL(window.location.href.split('?')[0]);
+  url.searchParams.set('m', compressed);
+  navigator.clipboard.writeText(url.toString()).then(() => {
+    showToast('Link copied to clipboard!');
+  }).catch(() => {
+    // Fallback: show URL in prompt
+    prompt('Copy this shareable link:', url.toString());
+  });
+}
+
+function loadFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  const compressed = params.get('m');
+  if (compressed) {
+    const decoded = decodeURLState(compressed);
+    if (decoded) {
+      document.getElementById('smilesInput').value = decoded;
+      return true;
+    }
+  }
+  return false;
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+// ---- Hero toggle ----
+function hideHero() {
+  const hero = document.getElementById('heroSection');
+  if (hero) hero.style.display = 'none';
+}
+
+function showShareBtn() {
+  document.getElementById('shareBtn').style.display = '';
+}
+
 // ---- Boot ----
-initRDKit();
+let hasURLMolecules = loadFromURL();
+
+initRDKit().then(() => {
+  // Auto-analyze if molecules loaded from URL
+  if (hasURLMolecules && RDKitModule) {
+    setTimeout(() => analyze(), 50);
+  }
+});
 </script>
 </body>
 </html>

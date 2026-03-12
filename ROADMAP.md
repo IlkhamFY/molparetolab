@@ -22,11 +22,14 @@
 - [ ] Draw a molecule -> instant property analysis
 - [ ] Copy SMILES from drawing
 
-## v4 (2:00 AM) - Multi-Objective Scoring
-- [ ] Custom scoring profiles (drug-like, CNS, oral bioavailability)
-- [ ] Weighted multi-objective score with user-adjustable sliders
-- [ ] "Which molecule is best for MY criteria?" mode
-- [ ] Profile presets: Lipinski, Veber, Ghose, Lead-like
+## v4 (4:00 AM) - Share & Polish
+- [x] Share URL with encoded molecules (LZ-String compressed URL params)
+- [x] SDF file upload (client-side .sdf parsing)
+- [x] Landing hero section explaining the tool
+- [x] README.md with features, how-to, screenshot placeholder
+- [x] og:image meta tag for social preview
+- [ ] Custom scoring profiles (drug-like, CNS, oral bioavailability) → moved to v5
+- [ ] Weighted multi-objective score → moved to v5
 
 ## v5 (3:00 AM) - Similarity & Clustering
 - [ ] Tanimoto similarity matrix (Morgan fingerprints via RDKit.js)
@@ -34,14 +37,14 @@
 - [ ] Chemical space diversity score
 
 ## v6 (4:00 AM) - Polish & Share-ability
-- [ ] Share URL with encoded molecules (URL params)
+- [x] Share URL with encoded molecules (URL params) — done in v4
 - [ ] Screenshot/export current view as PNG
-- [ ] README with screenshots and GIF
-- [ ] Social preview image (og:image)
-- [ ] Landing page hero section
+- [x] README with screenshots and GIF — done in v4
+- [x] Social preview image (og:image) — done in v4
+- [x] Landing page hero section — done in v4
 
 ## v7 (5:00 AM) - Real-World Data
-- [ ] Load SDF files
+- [x] Load SDF files — done in v4
 - [ ] Paste from clipboard (tab-separated with headers)
 - [ ] ChEMBL/PubChem lookup by name
 - [ ] Batch mode for >100 molecules
