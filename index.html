@@ -417,6 +417,9 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
 }
 
 .panel-title {
@@ -567,22 +570,25 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
 /* Axis selectors */
 .axis-selectors {
   display: flex;
-  gap: 8px;
+  gap: 4px;
   align-items: center;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text2);
+  flex-shrink: 1;
+  min-width: 0;
 }
 
 .axis-selectors select {
   background: var(--surface2);
   color: var(--text);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 4px 8px;
-  font-size: 12px;
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-size: 11px;
   cursor: pointer;
   outline: none;
   transition: border-color 0.15s;
+  max-width: 110px;
 }
 
 .axis-selectors select:hover { border-color: var(--accent); }
