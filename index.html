@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MolParetoLab - Multi-Objective Molecule Analysis</title>
+<script src="https://cdn.jsdelivr.net/npm/@rdkit/rdkit@2025.3.4-1.0.0/dist/index.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg: #0a0a0f;
+  --surface: #12121a;
+  --surface2: #1a1a25;
+  --border: #2a2a3a;
+  --text: #e0e0e8;
+  --text2: #8888a0;
+  --accent: #6366f1;
+  --accent2: #818cf8;
+  --green: #22c55e;
+  --red: #ef4444;
+  --yellow: #eab308;
+  --orange: #f97316;
+  --cyan: #06b6d4;
+  --pink: #ec4899;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.header {
+  padding: 24px 32px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header h1 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+}
+
+.header h1 span { color: var(--accent2); }
+
+.header .subtitle {
+  font-size: 13px;
+  color: var(--text2);
+  margin-top: 2px;
+}
+
+.header-right {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.badge {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: var(--surface2);
+  color: var(--text2);
+  border: 1px solid var(--border);
+}
+
+.main {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  min-height: calc(100vh - 73px);
+}
+
+.sidebar {
+  border-right: 1px solid var(--border);
+  padding: 20px;
+  overflow-y: auto;
+  max-height: calc(100vh - 73px);
+}
+
+.content {
+  padding: 20px;
+  overflow-y: auto;
+  max-height: calc(100vh - 73px);
+}
+
+.section-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text2);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+textarea {
+  width: 100%;
+  height: 140px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 13px;
+  padding: 12px;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+textarea:focus { border-color: var(--accent); }
+
+textarea::placeholder { color: var(--text2); opacity: 0.5; }
+
+.btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: white;
+  width: 100%;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.btn-primary:hover { background: var(--accent2); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-secondary {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover { background: var(--border); }
+
+.examples {
+  margin-top: 16px;
+}
+
+.example-btn {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text2);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  margin-bottom: 6px;
+  transition: all 0.15s;
+}
+
+.example-btn:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.example-btn .name { color: var(--text); font-weight: 500; }
+
+.status {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text2);
+  min-height: 18px;
+}
+
+.status.error { color: var(--red); }
+.status.success { color: var(--green); }
+
+/* Molecule cards */
+.mol-list {
+  margin-top: 20px;
+}
+
+.mol-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+  display: grid;
+  grid-template-columns: 80px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  transition: border-color 0.15s;
+  cursor: pointer;
+}
+
+.mol-card:hover { border-color: var(--accent); }
+.mol-card.selected { border-color: var(--accent); background: rgba(99, 102, 241, 0.05); }
+.mol-card.pareto { border-left: 3px solid var(--green); }
+
+.mol-svg {
+  width: 80px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mol-svg svg { max-width: 100%; max-height: 100%; }
+
+.mol-info .mol-name {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.mol-info .mol-smiles {
+  font-size: 11px;
+  color: var(--text2);
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.mol-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+}
+
+.mol-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.mol-badge.pass { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+.mol-badge.fail { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+.mol-badge.pareto-badge { background: rgba(99, 102, 241, 0.15); color: var(--accent2); }
+
+/* Content panels */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.panel-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.panel-subtitle {
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.chart-container {
+  position: relative;
+  height: 350px;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+
+.tab {
+  padding: 6px 14px;
+  font-size: 13px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text2);
+  transition: all 0.15s;
+  border: none;
+  background: none;
+}
+
+.tab:hover { color: var(--text); }
+.tab.active { background: var(--accent); color: white; }
+
+/* Property table */
+.prop-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.prop-table th {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+  font-weight: 500;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.prop-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(42, 42, 58, 0.5);
+}
+
+.prop-table tr:hover { background: rgba(99, 102, 241, 0.03); }
+
+.prop-val { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+.prop-good { color: var(--green); }
+.prop-bad { color: var(--red); }
+.prop-warn { color: var(--yellow); }
+
+/* Dominance matrix */
+.dom-grid {
+  display: grid;
+  gap: 2px;
+  font-size: 11px;
+}
+
+.dom-cell {
+  padding: 6px;
+  text-align: center;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.dom-header { color: var(--text2); font-weight: 600; }
+.dom-dominates { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+.dom-dominated { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+.dom-neutral { background: var(--surface2); color: var(--text2); }
+.dom-self { background: var(--surface); color: var(--text2); }
+
+/* Radar chart */
+.radar-container {
+  height: 300px;
+  position: relative;
+}
+
+/* Loading */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--text2);
+  font-size: 14px;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-top: 2px solid var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 10px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Empty state */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 60vh;
+  color: var(--text2);
+  text-align: center;
+}
+
+.empty-state .icon { font-size: 48px; margin-bottom: 16px; opacity: 0.3; }
+.empty-state h3 { font-size: 18px; margin-bottom: 8px; color: var(--text); }
+.empty-state p { font-size: 13px; max-width: 400px; line-height: 1.6; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .main { grid-template-columns: 1fr; }
+  .sidebar { max-height: none; }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text2); }
+
+.row { display: flex; gap: 16px; }
+.row > * { flex: 1; }
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text2);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Mol<span>Pareto</span>Lab</h1>
+    <div class="subtitle">multi-objective molecule analysis</div>
+  </div>
+  <div class="header-right">
+    <span class="badge">RDKit.js WASM</span>
+    <span class="badge">client-side</span>
+    <button class="btn btn-secondary" onclick="exportCSV()" id="exportBtn" style="display:none">Export CSV</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="section-label">Input SMILES</div>
+    <textarea id="smilesInput" placeholder="paste SMILES (one per line, optionally with name after space)&#10;&#10;CCO ethanol&#10;c1ccccc1 benzene&#10;CC(=O)Oc1ccccc1C(=O)O aspirin"></textarea>
+    <button class="btn btn-primary" id="analyzeBtn" onclick="analyze()" disabled>
+      <span class="spinner" id="initSpinner" style="margin:0"></span>
+      loading rdkit...
+    </button>
+    <div class="status" id="status"></div>
+
+    <div class="examples">
+      <div class="section-label" style="margin-top:16px">Quick Load</div>
+      <button class="example-btn" onclick="loadExample('druglike')">
+        <span class="name">Drug-like set</span> — 8 approved drugs
+      </button>
+      <button class="example-btn" onclick="loadExample('lipinski')">
+        <span class="name">Lipinski edge cases</span> — pass/fail boundary
+      </button>
+      <button class="example-btn" onclick="loadExample('diverse')">
+        <span class="name">Diverse chemical space</span> — fragments to macrocycles
+      </button>
+      <button class="example-btn" onclick="loadExample('kinase')">
+        <span class="name">Kinase inhibitors</span> — imatinib family
+      </button>
+    </div>
+
+    <div class="mol-list" id="molList"></div>
+  </div>
+
+  <div class="content" id="content">
+    <div class="empty-state">
+      <div class="icon">&#9878;</div>
+      <h3>paste molecules to start</h3>
+      <p>enter SMILES strings in the sidebar and click analyze. you'll get instant pareto analysis across drug-likeness properties — no server, everything runs in your browser.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---- State ----
+let RDKitModule = null;
+let molecules = [];
+let charts = {};
+let selectedMolIdx = null;
+let currentView = 'pareto';
+
+// ---- Property definitions ----
+const PROPERTIES = [
+  { key: 'MW', label: 'Mol Weight', unit: 'Da', lipinski: { max: 500 }, direction: 'lower' },
+  { key: 'LogP', label: 'cLogP', unit: '', lipinski: { max: 5 }, direction: 'lower' },
+  { key: 'HBD', label: 'H-Bond Donors', unit: '', lipinski: { max: 5 }, direction: 'lower' },
+  { key: 'HBA', label: 'H-Bond Acceptors', unit: '', lipinski: { max: 10 }, direction: 'lower' },
+  { key: 'TPSA', label: 'TPSA', unit: 'A2', lipinski: { max: 140 }, direction: 'lower' },
+  { key: 'RotBonds', label: 'Rot. Bonds', unit: '', lipinski: { max: 10 }, direction: 'lower' },
+  { key: 'FrCSP3', label: 'Frac sp3', unit: '', direction: 'higher' },
+  { key: 'Rings', label: 'Ring Count', unit: '', direction: 'neutral' },
+  { key: 'AromaticRings', label: 'Aromatic Rings', unit: '', direction: 'neutral' },
+  { key: 'HeavyAtoms', label: 'Heavy Atoms', unit: '', direction: 'lower' },
+];
+
+const COLORS = ['#6366f1','#22c55e','#ef4444','#eab308','#06b6d4','#ec4899','#f97316','#8b5cf6','#14b8a6','#f43f5e','#84cc16','#a855f7'];
+
+// ---- Examples ----
+const EXAMPLES = {
+  druglike: `CC(=O)Oc1ccccc1C(=O)O aspirin
+CC(C)Cc1ccc(cc1)C(C)C(=O)O ibuprofen
+CC(=O)Nc1ccc(O)cc1 acetaminophen
+CN1C=NC2=C1C(=O)N(C(=O)N2C)C caffeine
+OC(=O)C1CCCN1 proline
+c1ccc2c(c1)cc1ccc3cccc4ccc2c1c34 pyrene
+CC12CCC3C(C1CCC2O)CCC1=CC(=O)CCC13C testosterone
+OC(=O)c1cc(O)c(O)c(O)c1 gallic_acid`,
+
+  lipinski: `C1CCCCC1 cyclohexane_MW84
+CCCCCCCCCCCCCCCCCCCC icosane_MW283
+c1ccc(-c2ccc(-c3ccc(-c4ccccc4)cc3)cc2)cc1 quaterphenyl_MW306
+OC(=O)CCCCCCCCCCCCCCC palmitic_acid_MW256
+NCCCCCCCCCCCCCCCCCCN diaminooctadecane
+CC(C)(C)c1ccc(cc1)C(O)(c1ccc(cc1)C(C)(C)C)c1ccc(cc1)C(C)(C)C MW_violator
+O=C(O)c1ccccc1O salicylic_acid_MW138
+c1ccccc1 benzene_MW78`,
+
+  diverse: `C methane
+CCO ethanol
+c1ccccc1 benzene
+CC(=O)Oc1ccccc1C(=O)O aspirin
+CN1C(=O)N(C)c2[nH]cnc2C1=O caffeine_modified
+CC1=C(C(CCC1)(C)C)/C=C/C(=C/C=C/C(=C/C=C/C=C(/C=C/C=C(/C=C/C1=C(CCCC1(C)C)C)\C)\C)/C)\C beta_carotene
+OC[C@H]1OC(O)[C@H](O)[C@@H](O)[C@@H]1O glucose
+CC(C)CC1=CC=C(C=C1)C(C)C(=O)O ibuprofen`,
+
+  kinase: `CC1=C(C=C(C=C1)NC(=O)C2=CC=C(C=C2)CN3CCN(CC3)C)NC4=NC=CC(=N4)C5=CN=CC=C5 imatinib
+CC1=C(C=C(C=C1)NC(=O)C2=CC(=CC=C2)C(F)(F)F)NC3=NC=CC(=N3)C4=CN=CC=C4 nilotinib
+C#CC1=CC=CC(=C1)NC2=NC=NC3=C2C=C(C=C3)OCCCCCCN4CCN(CC4)C dasatinib_like
+CC(C)C1=CC=CC(=C1)NC(=O)C2=CC=C(C=C2)CNC(=O)OC bosutinib_like
+CC1=CC=C(C=C1)C(=O)NC2=CC(=CC=C2)NC(=O)C3=CC=CN=C3 sorafenib_like
+c1ccc(cc1)-c1ccc2c(c1)ccc1c3cc(-c4ccncc4)ccc3[nH]c21 ponatinib_core`,
+};
+
+// ---- Init RDKit ----
+async function initRDKit() {
+  try {
+    RDKitModule = await initRDKitModule();
+    document.getElementById('analyzeBtn').disabled = false;
+    document.getElementById('analyzeBtn').innerHTML = 'Analyze Molecules';
+    document.getElementById('initSpinner').style.display = 'none';
+    setStatus('rdkit loaded. paste SMILES and click analyze.', 'success');
+  } catch(e) {
+    setStatus('failed to load rdkit: ' + e.message, 'error');
+  }
+}
+
+function setStatus(msg, type) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status' + (type ? ' ' + type : '');
+}
+
+// ---- Analysis ----
+function analyze() {
+  const input = document.getElementById('smilesInput').value.trim();
+  if (!input) { setStatus('enter SMILES first', 'error'); return; }
+
+  molecules = [];
+  const lines = input.split('\n').filter(l => l.trim());
+
+  let errors = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const parts = lines[i].trim().split(/\s+/);
+    const smiles = parts[0];
+    const name = parts.slice(1).join(' ') || `mol_${i+1}`;
+
+    try {
+      const mol = RDKitModule.get_mol(smiles);
+      if (!mol || !mol.is_valid()) { errors++; continue; }
+
+      const desc = JSON.parse(mol.get_descriptors());
+      const svg = mol.get_svg_with_highlights(JSON.stringify({
+        width: 200, height: 150,
+      }));
+
+      molecules.push({
+        name, smiles,
+        svg,
+        props: {
+          MW: desc.exactmw || desc.amw || 0,
+          LogP: desc.CrippenClogP || 0,
+          HBD: desc.NumHBD || 0,
+          HBA: desc.NumHBA || 0,
+          TPSA: desc.tpsa || 0,
+          RotBonds: desc.NumRotatableBonds || 0,
+          FrCSP3: desc.FractionCSP3 || 0,
+          Rings: desc.RingCount || 0,
+          AromaticRings: desc.NumAromaticRings || 0,
+          HeavyAtoms: desc.NumHeavyAtoms || desc.HeavyAtomCount || 0,
+        },
+        lipinski: null,
+        paretoRank: null,
+        dominates: [],
+        dominatedBy: [],
+      });
+
+      mol.delete();
+    } catch(e) {
+      errors++;
+    }
+  }
+
+  // Lipinski check
+  molecules.forEach(m => {
+    const p = m.props;
+    const violations = [
+      p.MW > 500, p.LogP > 5, p.HBD > 5, p.HBA > 10
+    ].filter(Boolean).length;
+    m.lipinski = { violations, pass: violations <= 1 };
+  });
+
+  // Pareto ranking
+  computeParetoRanks();
+
+  // Dominance analysis
+  computeDominance();
+
+  if (molecules.length === 0) {
+    setStatus(`no valid molecules parsed (${errors} errors)`, 'error');
+    return;
+  }
+
+  setStatus(`${molecules.length} molecules analyzed` + (errors ? `, ${errors} failed` : ''), 'success');
+  document.getElementById('exportBtn').style.display = '';
+
+  renderAll();
+}
+
+function computeParetoRanks() {
+  // Non-dominated sorting (NSGA-II style)
+  // For drug-likeness: lower MW, LogP in range, lower TPSA, etc.
+  // We use a simplified "minimize all" for Pareto
+  const keys = ['MW', 'LogP', 'HBD', 'HBA', 'TPSA', 'RotBonds'];
+
+  const n = molecules.length;
+  const dominated = new Array(n).fill(false);
+
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      if (i === j) continue;
+      // Does j dominate i? (j <= i on all, j < i on at least one)
+      let allLeq = true, anyLt = false;
+      for (const k of keys) {
+        if (molecules[j].props[k] > molecules[i].props[k]) allLeq = false;
+        if (molecules[j].props[k] < molecules[i].props[k]) anyLt = true;
+      }
+      if (allLeq && anyLt) { dominated[i] = true; break; }
+    }
+  }
+
+  molecules.forEach((m, i) => {
+    m.paretoRank = dominated[i] ? 2 : 1;
+  });
+}
+
+function computeDominance() {
+  const keys = ['MW', 'LogP', 'HBD', 'HBA', 'TPSA', 'RotBonds'];
+  const n = molecules.length;
+
+  for (let i = 0; i < n; i++) {
+    molecules[i].dominates = [];
+    molecules[i].dominatedBy = [];
+  }
+
+  for (let i = 0; i < n; i++) {
+    for (let j = i+1; j < n; j++) {
+      let iBetter = 0, jBetter = 0, ties = 0;
+      for (const k of keys) {
+        if (molecules[i].props[k] < molecules[j].props[k]) iBetter++;
+        else if (molecules[i].props[k] > molecules[j].props[k]) jBetter++;
+        else ties++;
+      }
+      if (iBetter > 0 && jBetter === 0) {
+        molecules[i].dominates.push(j);
+        molecules[j].dominatedBy.push(i);
+      } else if (jBetter > 0 && iBetter === 0) {
+        molecules[j].dominates.push(i);
+        molecules[i].dominatedBy.push(j);
+      }
+    }
+  }
+}
+
+// ---- Rendering ----
+function renderAll() {
+  renderMolList();
+  renderContent();
+}
+
+function renderMolList() {
+  const container = document.getElementById('molList');
+  container.innerHTML = '';
+
+  molecules.forEach((m, i) => {
+    const card = document.createElement('div');
+    card.className = 'mol-card' + (m.paretoRank === 1 ? ' pareto' : '') + (i === selectedMolIdx ? ' selected' : '');
+    card.onclick = () => { selectedMolIdx = (selectedMolIdx === i) ? null : i; renderAll(); };
+
+    card.innerHTML = `
+      <div class="mol-svg">${m.svg}</div>
+      <div class="mol-info">
+        <div class="mol-name">${m.name}</div>
+        <div class="mol-smiles">${m.smiles}</div>
+      </div>
+      <div class="mol-badges">
+        ${m.paretoRank === 1 ? '<span class="mol-badge pareto-badge">pareto</span>' : ''}
+        <span class="mol-badge ${m.lipinski.pass ? 'pass' : 'fail'}">${m.lipinski.pass ? 'Ro5 pass' : m.lipinski.violations + ' violations'}</span>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function renderContent() {
+  const content = document.getElementById('content');
+  const paretoCount = molecules.filter(m => m.paretoRank === 1).length;
+
+  content.innerHTML = `
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-value">${molecules.length}</div>
+        <div class="stat-label">molecules</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" style="color:var(--green)">${paretoCount}</div>
+        <div class="stat-label">pareto optimal</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" style="color:var(--cyan)">${molecules.filter(m => m.lipinski.pass).length}</div>
+        <div class="stat-label">ro5 pass</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" style="color:var(--red)">${molecules.filter(m => !m.lipinski.pass).length}</div>
+        <div class="stat-label">ro5 fail</div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab ${currentView==='pareto'?'active':''}" onclick="switchView('pareto')">Pareto Scatter</button>
+      <button class="tab ${currentView==='radar'?'active':''}" onclick="switchView('radar')">Radar</button>
+      <button class="tab ${currentView==='table'?'active':''}" onclick="switchView('table')">Properties</button>
+      <button class="tab ${currentView==='dominance'?'active':''}" onclick="switchView('dominance')">Dominance</button>
+    </div>
+
+    <div id="viewContainer"></div>
+  `;
+
+  const container = document.getElementById('viewContainer');
+  if (currentView === 'pareto') renderParetoView(container);
+  else if (currentView === 'radar') renderRadarView(container);
+  else if (currentView === 'table') renderTableView(container);
+  else if (currentView === 'dominance') renderDominanceView(container);
+}
+
+function switchView(v) { currentView = v; renderContent(); }
+
+function renderParetoView(container) {
+  const propPairs = [
+    ['MW', 'LogP'], ['MW', 'TPSA'], ['LogP', 'TPSA'],
+    ['HBD', 'HBA'], ['MW', 'RotBonds'], ['LogP', 'FrCSP3'],
+  ];
+
+  let html = '<div class="row" style="flex-wrap:wrap">';
+  propPairs.forEach(([xKey, yKey], idx) => {
+    html += `<div class="panel" style="flex:1;min-width:300px">
+      <div class="panel-header">
+        <div class="panel-title">${xKey} vs ${yKey}</div>
+        <div class="panel-subtitle">pareto front</div>
+      </div>
+      <div class="chart-container"><canvas id="scatter_${idx}"></canvas></div>
+    </div>`;
+  });
+  html += '</div>';
+  container.innerHTML = html;
+
+  propPairs.forEach(([xKey, yKey], idx) => {
+    const canvas = document.getElementById(`scatter_${idx}`);
+    const datasets = [];
+
+    // Non-dominated
+    const paretoData = molecules.filter(m => m.paretoRank === 1).map(m => ({
+      x: m.props[xKey], y: m.props[yKey], label: m.name
+    }));
+    // Dominated
+    const domData = molecules.filter(m => m.paretoRank !== 1).map(m => ({
+      x: m.props[xKey], y: m.props[yKey], label: m.name
+    }));
+    // Selected
+    const selData = selectedMolIdx !== null ? [{
+      x: molecules[selectedMolIdx].props[xKey],
+      y: molecules[selectedMolIdx].props[yKey],
+      label: molecules[selectedMolIdx].name
+    }] : [];
+
+    datasets.push({
+      label: 'Pareto', data: paretoData,
+      backgroundColor: 'rgba(34,197,94,0.7)', borderColor: '#22c55e',
+      pointRadius: 6, pointHoverRadius: 8,
+    });
+    datasets.push({
+      label: 'Dominated', data: domData,
+      backgroundColor: 'rgba(136,136,160,0.4)', borderColor: '#8888a0',
+      pointRadius: 5, pointHoverRadius: 7,
+    });
+    if (selData.length) {
+      datasets.push({
+        label: 'Selected', data: selData,
+        backgroundColor: '#6366f1', borderColor: '#fff',
+        borderWidth: 2, pointRadius: 9, pointHoverRadius: 11,
+      });
+    }
+
+    // Add Lipinski limits
+    const xProp = PROPERTIES.find(p => p.key === xKey);
+    const yProp = PROPERTIES.find(p => p.key === yKey);
+
+    new Chart(canvas, {
+      type: 'scatter',
+      data: { datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            callbacks: {
+              label: (ctx) => {
+                const d = ctx.raw;
+                return `${d.label}: ${xKey}=${d.x.toFixed(1)}, ${yKey}=${d.y.toFixed(1)}`;
+              }
+            }
+          },
+          annotation: undefined,
+        },
+        scales: {
+          x: {
+            title: { display: true, text: xKey, color: '#8888a0' },
+            grid: { color: 'rgba(42,42,58,0.5)' },
+            ticks: { color: '#8888a0' },
+          },
+          y: {
+            title: { display: true, text: yKey, color: '#8888a0' },
+            grid: { color: 'rgba(42,42,58,0.5)' },
+            ticks: { color: '#8888a0' },
+          },
+        },
+      }
+    });
+  });
+}
+
+function renderRadarView(container) {
+  const labels = ['MW', 'LogP', 'HBD', 'HBA', 'TPSA', 'RotBonds', 'FrCSP3'];
+  // Normalize to [0, 1] based on Lipinski limits or observed range
+  const maxVals = {};
+  labels.forEach(k => {
+    const prop = PROPERTIES.find(p => p.key === k);
+    if (prop && prop.lipinski) maxVals[k] = prop.lipinski.max * 1.5;
+    else maxVals[k] = Math.max(...molecules.map(m => m.props[k]), 1);
+  });
+
+  const datasets = molecules.map((m, i) => ({
+    label: m.name,
+    data: labels.map(k => Math.min(m.props[k] / maxVals[k], 1.5)),
+    borderColor: COLORS[i % COLORS.length],
+    backgroundColor: COLORS[i % COLORS.length] + '20',
+    borderWidth: selectedMolIdx === i ? 3 : 1.5,
+    pointRadius: selectedMolIdx === i ? 4 : 2,
+  }));
+
+  container.innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">property radar</div>
+        <div class="panel-subtitle">normalized to lipinski limits (1.0 = threshold)</div>
+      </div>
+      <div class="radar-container"><canvas id="radarChart"></canvas></div>
+    </div>
+  `;
+
+  new Chart(document.getElementById('radarChart'), {
+    type: 'radar',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { labels: { color: '#8888a0', font: { size: 11 } } } },
+      scales: {
+        r: {
+          grid: { color: 'rgba(42,42,58,0.5)' },
+          angleLines: { color: 'rgba(42,42,58,0.5)' },
+          pointLabels: { color: '#e0e0e8', font: { size: 12 } },
+          ticks: { color: '#8888a0', backdropColor: 'transparent' },
+          suggestedMin: 0, suggestedMax: 1.2,
+        }
+      }
+    }
+  });
+}
+
+function renderTableView(container) {
+  let html = `<div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">molecular properties</div>
+      <div class="panel-subtitle">click column headers to sort</div>
+    </div>
+    <table class="prop-table">
+      <tr>
+        <th>Molecule</th>
+        ${PROPERTIES.map(p => `<th style="cursor:pointer" onclick="sortTable('${p.key}')">${p.label}</th>`).join('')}
+        <th>Lipinski</th>
+        <th>Pareto</th>
+      </tr>`;
+
+  molecules.forEach((m, i) => {
+    html += `<tr style="${i===selectedMolIdx ? 'background:rgba(99,102,241,0.08)' : ''}">
+      <td><strong>${m.name}</strong></td>`;
+    PROPERTIES.forEach(p => {
+      const v = m.props[p.key];
+      let cls = '';
+      if (p.lipinski) {
+        cls = v <= p.lipinski.max ? 'prop-good' : 'prop-bad';
+      }
+      html += `<td class="prop-val ${cls}">${typeof v === 'number' ? v.toFixed(p.key === 'FrCSP3' ? 3 : 1) : v}</td>`;
+    });
+    html += `<td>${m.lipinski.pass ? '<span class="prop-good">pass</span>' : '<span class="prop-bad">' + m.lipinski.violations + ' fail</span>'}</td>`;
+    html += `<td>${m.paretoRank === 1 ? '<span class="prop-good">yes</span>' : '<span class="prop-bad">no</span>'}</td>`;
+    html += `</tr>`;
+  });
+
+  html += '</table></div>';
+  container.innerHTML = html;
+}
+
+function renderDominanceView(container) {
+  const n = molecules.length;
+  if (n > 15) {
+    container.innerHTML = '<div class="panel"><p>dominance matrix limited to 15 molecules for readability</p></div>';
+    return;
+  }
+
+  const cols = n + 1;
+  let html = `<div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">dominance matrix</div>
+      <div class="panel-subtitle">row dominates column? (on MW, LogP, HBD, HBA, TPSA, RotBonds)</div>
+    </div>
+    <div class="dom-grid" style="grid-template-columns: repeat(${cols}, 1fr)">
+      <div class="dom-cell dom-header"></div>`;
+
+  molecules.forEach(m => {
+    html += `<div class="dom-cell dom-header" title="${m.smiles}">${m.name.slice(0,8)}</div>`;
+  });
+
+  for (let i = 0; i < n; i++) {
+    html += `<div class="dom-cell dom-header">${molecules[i].name.slice(0,8)}</div>`;
+    for (let j = 0; j < n; j++) {
+      if (i === j) {
+        html += `<div class="dom-cell dom-self">-</div>`;
+      } else if (molecules[i].dominates.includes(j)) {
+        html += `<div class="dom-cell dom-dominates">DOM</div>`;
+      } else if (molecules[i].dominatedBy.includes(j)) {
+        html += `<div class="dom-cell dom-dominated">dom'd</div>`;
+      } else {
+        html += `<div class="dom-cell dom-neutral">~</div>`;
+      }
+    }
+  }
+
+  html += '</div></div>';
+
+  // Summary
+  html += '<div class="panel"><div class="panel-title" style="margin-bottom:12px">dominance summary</div>';
+  molecules.forEach((m, i) => {
+    const domCount = m.dominates.length;
+    const byCount = m.dominatedBy.length;
+    const status = m.paretoRank === 1 ? 'pareto-optimal' : 'dominated';
+    html += `<div style="margin-bottom:6px;font-size:13px">
+      <strong>${m.name}</strong>: dominates ${domCount}, dominated by ${byCount}
+      <span style="color:${m.paretoRank===1?'var(--green)':'var(--red)'};margin-left:8px">${status}</span>
+    </div>`;
+  });
+  html += '</div>';
+
+  container.innerHTML = html;
+}
+
+// ---- Utilities ----
+function loadExample(name) {
+  document.getElementById('smilesInput').value = EXAMPLES[name];
+}
+
+function exportCSV() {
+  if (!molecules.length) return;
+  let csv = 'Name,SMILES,' + PROPERTIES.map(p => p.key).join(',') + ',Lipinski_Pass,Pareto_Optimal\n';
+  molecules.forEach(m => {
+    csv += `"${m.name}","${m.smiles}",`;
+    csv += PROPERTIES.map(p => m.props[p.key].toFixed(3)).join(',');
+    csv += `,${m.lipinski.pass},${m.paretoRank===1}\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'molparetolab_export.csv';
+  a.click();
+}
+
+let sortKey = null, sortDir = 1;
+function sortTable(key) {
+  if (sortKey === key) sortDir *= -1;
+  else { sortKey = key; sortDir = 1; }
+  molecules.sort((a, b) => (a.props[key] - b.props[key]) * sortDir);
+  renderAll();
+}
+
+// ---- Boot ----
+initRDKit();
+</script>
+</body>
+</html>
