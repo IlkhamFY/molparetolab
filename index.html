@@ -452,6 +452,9 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
 }
 
 .tab:hover { color: var(--text); }
+.tab.tab-secondary { opacity: 0.5; }
+.tab.tab-secondary:hover { opacity: 0.8; }
+.tab.tab-secondary.active { opacity: 1; }
 .tab.active { background: var(--accent); color: white; }
 
 /* Property table */
@@ -538,60 +541,25 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  height: 60vh;
+  height: 50vh;
   color: var(--text2);
   text-align: center;
 }
 
-.empty-state .icon {
-  font-size: 56px;
-  margin-bottom: 20px;
-  opacity: 0.5;
-  filter: grayscale(0.3);
-}
-
 .empty-state h3 {
-  font-size: 20px;
-  margin-bottom: 10px;
+  font-size: 17px;
+  margin-bottom: 6px;
   color: var(--text);
-  font-weight: 600;
-  letter-spacing: -0.3px;
+  font-weight: 500;
+  letter-spacing: -0.2px;
 }
 
 .empty-state p {
   font-size: 13px;
-  max-width: 420px;
-  line-height: 1.7;
+  max-width: 320px;
+  line-height: 1.6;
   color: var(--text2);
 }
-
-.empty-state .features {
-  display: flex;
-  gap: 24px;
-  margin-top: 28px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
-.empty-state .feature {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--text2);
-  padding: 14px 18px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  min-width: 120px;
-  transition: border-color 0.2s;
-}
-
-.empty-state .feature:hover { border-color: var(--accent); }
-
-.empty-state .feature .feat-icon { font-size: 20px; opacity: 0.7; }
-.empty-state .feature .feat-label { font-weight: 500; color: var(--text); }
 
 /* Axis selectors */
 .axis-selectors {
@@ -647,46 +615,24 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
 
 /* Hero section */
 .hero {
-  padding: 48px 32px 40px;
+  padding: 32px 32px 24px;
   text-align: center;
   border-bottom: 1px solid var(--border);
-  background: linear-gradient(180deg, rgba(99,102,241,0.06) 0%, transparent 100%);
 }
 
 .hero h2 {
-  font-size: 32px;
-  font-weight: 700;
-  letter-spacing: -1px;
-  margin-bottom: 12px;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  margin-bottom: 8px;
 }
-
-.hero h2 span { color: var(--accent2); }
 
 .hero p {
-  font-size: 15px;
+  font-size: 14px;
   color: var(--text2);
-  max-width: 640px;
-  margin: 0 auto 24px;
-  line-height: 1.7;
-}
-
-.hero-pills {
-  display: flex;
-  gap: 10px;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.hero-pill {
-  font-size: 12px;
-  padding: 6px 14px;
-  border-radius: 20px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text2);
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  max-width: 500px;
+  margin: 0 auto;
+  line-height: 1.6;
 }
 
 .hero-pill .pill-icon { font-size: 14px; }
@@ -1306,29 +1252,15 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
     <span class="mol-count-badge" id="molCountBadge">0 molecules</span>
   </div>
   <div class="header-right">
-    <span class="badge">RDKit.js WASM</span>
-    <span class="badge">client-side</span>
-    <button class="btn-share" onclick="shareURL()" id="shareBtn" style="display:none">🔗 Share URL</button>
+    <button class="btn-share" onclick="shareURL()" id="shareBtn" style="display:none">Share URL</button>
     <button class="btn btn-secondary" onclick="exportCSV()" id="exportBtn" style="display:none">Export CSV</button>
-    <a href="https://github.com/IlkhamFY/molparetolab/issues" target="_blank" rel="noopener" class="btn-share" style="text-decoration:none">💬 Feedback</a>
+    <a href="https://github.com/IlkhamFY/molparetolab/issues" target="_blank" rel="noopener" class="btn-share" style="text-decoration:none">Feedback</a>
   </div>
 </div>
 
 <div class="hero" id="heroSection">
-  <h2>Multi-Objective <span>Pareto Analysis</span> for Molecules</h2>
-  <p>Paste SMILES or upload SDF files and instantly explore the Pareto frontier across drug-likeness properties. Identify non-dominated candidates, check Lipinski Ro5, compare dominance — all running client-side via RDKit WASM. No server, no installs, no data leaves your browser.</p>
-  <div class="hero-pills">
-    <div class="hero-pill"><span class="pill-icon">📊</span> Pareto Front Scatter</div>
-    <div class="hero-pill"><span class="pill-icon">🥚</span> BOILED-Egg Plot</div>
-    <div class="hero-pill"><span class="pill-icon">🎯</span> Multi-Filter Overlays</div>
-    <div class="hero-pill"><span class="pill-icon">🕸️</span> Radar Property View</div>
-    <div class="hero-pill"><span class="pill-icon">⚔️</span> Dominance Matrix</div>
-    <div class="hero-pill"><span class="pill-icon">🔬</span> Molecule Comparison</div>
-    <div class="hero-pill"><span class="pill-icon">📁</span> SDF File Upload</div>
-    <div class="hero-pill"><span class="pill-icon">🔗</span> Shareable URLs</div>
-    <div class="hero-pill"><span class="pill-icon">📏</span> Parallel Coordinates</div>
-    <div class="hero-pill"><span class="pill-icon">🎯</span> Scoring Profiles</div>
-  </div>
+  <h2>Paste molecules. See trade-offs.</h2>
+  <p>Multi-objective Pareto analysis across drug-likeness properties. Client-side via RDKit WASM — nothing leaves your browser.</p>
 </div>
 
 <div id="toast" class="toast"></div>
@@ -1370,7 +1302,6 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
          ondragover="event.preventDefault();this.classList.add('dragover')"
          ondragleave="this.classList.remove('dragover')"
          ondrop="event.preventDefault();this.classList.remove('dragover');handleSDFDrop(event)">
-      <span class="drop-icon">📁</span>
       Drag &amp; drop .sdf file or click to browse
       <input type="file" id="sdfFile" accept=".sdf,.sd" onchange="handleSDFFile(this.files[0])">
     </div>
@@ -1388,31 +1319,8 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
 
   <div class="content" id="content">
     <div class="empty-state">
-      <div class="icon">⚗️</div>
       <h3>Paste molecules to begin analysis</h3>
-      <p>Enter SMILES strings in the sidebar or load an example set. Instant multi-objective Pareto analysis across drug-likeness properties — everything runs client-side via RDKit WASM.</p>
-      <div class="features">
-        <div class="feature">
-          <span class="feat-icon">📊</span>
-          <span class="feat-label">Pareto Fronts</span>
-          <span>6 scatter plots</span>
-        </div>
-        <div class="feature">
-          <span class="feat-icon">🥚</span>
-          <span class="feat-label">BOILED-Egg</span>
-          <span>BBB / GI absorption</span>
-        </div>
-        <div class="feature">
-          <span class="feat-icon">🔬</span>
-          <span class="feat-label">Compare</span>
-          <span>side-by-side</span>
-        </div>
-        <div class="feature">
-          <span class="feat-icon">⚔️</span>
-          <span class="feat-label">Dominance</span>
-          <span>pairwise matrix</span>
-        </div>
-      </div>
+      <p>Enter SMILES in the sidebar or load an example set.</p>
     </div>
   </div>
 </div>
@@ -1750,10 +1658,21 @@ function computeDominance() {
 }
 
 // ---- Rendering ----
+function pickSmartView() {
+  const n = molecules.length;
+  if (n === 0) return 'pareto';
+  if (n === 2) return 'compare';
+  if (n <= 4) return 'scoring';
+  if (n <= 12) return 'pareto';
+  return 'parallel'; // large sets: parallel coords are most useful
+}
+
 function renderAll() {
   if (molecules.length > 0) {
     hideHero();
     showShareBtn();
+    // Smart default: pick the best starting view for this set
+    currentView = pickSmartView();
   }
   renderMolList();
   renderContent();
@@ -1866,15 +1785,15 @@ function renderContent() {
     </div>
 
     <div class="tabs">
-      <button class="tab ${currentView==='pareto'?'active':''}" onclick="switchView('pareto')">Pareto Scatter</button>
-      <button class="tab ${currentView==='egg'?'active':''}" onclick="switchView('egg')">🥚 BOILED-Egg</button>
-      <button class="tab ${currentView==='radar'?'active':''}" onclick="switchView('radar')">Radar</button>
-      <button class="tab ${currentView==='parallel'?'active':''}" onclick="switchView('parallel')">📏 Parallel</button>
-      <button class="tab ${currentView==='table'?'active':''}" onclick="switchView('table')">Properties</button>
-      <button class="tab ${currentView==='dominance'?'active':''}" onclick="switchView('dominance')">Dominance</button>
-      <button class="tab ${currentView==='similarity'?'active':''}" onclick="switchView('similarity')">🧬 Similarity</button>
-      <button class="tab ${currentView==='scoring'?'active':''}" onclick="switchView('scoring')">🎯 Scoring</button>
-      <button class="tab ${currentView==='compare'?'active':''}" onclick="switchView('compare')">🔬 Compare${compareIndices.length===2?' (2)':''}</button>
+      <button class="tab ${currentView==='pareto'?'active':''}" onclick="switchView('pareto')">Pareto</button>
+      <button class="tab ${currentView==='scoring'?'active':''}" onclick="switchView('scoring')">Scoring</button>
+      <button class="tab ${currentView==='parallel'?'active':''}" onclick="switchView('parallel')">Parallel</button>
+      <button class="tab ${currentView==='similarity'?'active':''}" onclick="switchView('similarity')">Similarity</button>
+      <button class="tab ${currentView==='egg'?'active':''}" onclick="switchView('egg')">BOILED-Egg</button>
+      <button class="tab tab-secondary ${currentView==='radar'?'active':''}" onclick="switchView('radar')">Radar</button>
+      <button class="tab tab-secondary ${currentView==='table'?'active':''}" onclick="switchView('table')">Properties</button>
+      <button class="tab tab-secondary ${currentView==='dominance'?'active':''}" onclick="switchView('dominance')">Dominance</button>
+      <button class="tab tab-secondary ${currentView==='compare'?'active':''}" onclick="switchView('compare')">Compare${compareIndices.length===2?' (2)':''}</button>
     </div>
 
     <div id="viewContainer"></div>
@@ -2150,7 +2069,7 @@ function renderEggView(container) {
     <div class="panel">
       <div class="panel-header">
         <div>
-          <div class="panel-title">🥚 BOILED-Egg Plot</div>
+          <div class="panel-title">BOILED-Egg Plot</div>
           <div class="panel-subtitle">Brain Or Intestinal EstimateD permeation — Daina & Zoete, ChemMedChem 2016</div>
         </div>
       </div>
@@ -2462,7 +2381,7 @@ function renderCompareView(container) {
   container.innerHTML = `
     <div class="panel">
       <div class="panel-header">
-        <div class="panel-title">🔬 Molecule Comparison</div>
+        <div class="panel-title">Molecule Comparison</div>
         <div class="panel-subtitle">${m1.name} vs ${m2.name}</div>
       </div>
 
@@ -2848,7 +2767,7 @@ function renderSimilarityView(container) {
   let html = `<div class="panel">
     <div class="panel-header">
       <div>
-        <div class="panel-title">🧬 Tanimoto Similarity</div>
+        <div class="panel-title">Tanimoto Similarity</div>
         <div class="panel-subtitle">Morgan fingerprints (radius 2, 2048 bits) — pairwise structural similarity</div>
       </div>
     </div>
@@ -2888,7 +2807,7 @@ function renderSimilarityView(container) {
   html += `<div class="panel">
     <div class="panel-header">
       <div>
-        <div class="panel-title">⚡ Activity Cliffs</div>
+        <div class="panel-title">Activity Cliffs</div>
         <div class="panel-subtitle">structurally similar (Tanimoto > 0.5) but with large property differences — key SAR insights</div>
       </div>
     </div>`;
@@ -3009,7 +2928,7 @@ function renderParallelView(container) {
     <div class="panel">
       <div class="panel-header">
         <div>
-          <div class="panel-title">📏 Parallel Coordinates</div>
+          <div class="panel-title">Parallel Coordinates</div>
           <div class="panel-subtitle">drag on axes to brush-filter molecules · click axis to clear</div>
         </div>
       </div>
@@ -3322,7 +3241,7 @@ function renderScoringView(container) {
     <div class="panel">
       <div class="panel-header">
         <div>
-          <div class="panel-title">🎯 Scoring Profiles</div>
+          <div class="panel-title">Scoring Profiles</div>
           <div class="panel-subtitle">weighted Chebyshev scalarization — lower score = closer to ideal</div>
         </div>
       </div>
