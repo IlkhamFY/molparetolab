@@ -2181,7 +2181,7 @@ async function lookupSMILES(name) {
   if (!resp.ok) return null;
   const data = await resp.json();
   const props = data?.PropertyTable?.Properties;
-  return props?.[0]?.CanonicalSMILES || null;
+  return props?.[0]?.CanonicalSMILES || props?.[0]?.ConnectivitySMILES || null;
 }
 
 function looksLikeName(line) {
