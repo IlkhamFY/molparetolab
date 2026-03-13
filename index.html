@@ -7,13 +7,13 @@
 <meta name="description" content="Paste SMILES or upload SDF files for instant multi-objective Pareto analysis across drug-likeness properties. BOILED-Egg plot, multi-filter overlays, molecule comparison. Runs entirely client-side via RDKit WASM.">
 <meta property="og:title" content="MolParetoLab — Multi-Objective Molecule Analysis">
 <meta property="og:description" content="Explore Pareto fronts across drug-likeness properties. BOILED-Egg BBB/GI plot. Paste SMILES, upload SDF, share via URL. 100% client-side.">
-<meta property="og:image" content="https://molparetolab.ilkham.com/og-image.png">
+<meta property="og:image" content="https://raw.githubusercontent.com/IlkhamFY/molparetolab/main/screenshots/pareto-scatter.jpg">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://molparetolab.ilkham.com">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="MolParetoLab — Multi-Objective Molecule Analysis">
 <meta name="twitter:description" content="Paste SMILES, explore Pareto fronts across drug-likeness properties. BOILED-Egg BBB/GI plot. 100% client-side via RDKit WASM.">
-<meta name="twitter:image" content="https://molparetolab.ilkham.com/og-image.png">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/IlkhamFY/molparetolab/main/screenshots/pareto-scatter.jpg">
 <script defer data-domain="molparetolab.ilkham.com" src="https://plausible.io/js/script.js"></script>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230a0a0f'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-family='system-ui' font-size='18' font-weight='700' fill='%2314b8a6'%3EMP%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/geist@5.0.1/400.css">
@@ -818,7 +818,7 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
   top: 0; left: 0; right: 0; bottom: 0;
   background: rgba(0,0,0,0.7);
   backdrop-filter: blur(4px);
-  display: flex;
+  display: none;
   align-items: center;
   justify-content: center;
   z-index: 2000;
@@ -827,7 +827,7 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
   transition: opacity 0.2s;
 }
 
-.modal-overlay.active { opacity: 1; pointer-events: all; }
+.modal-overlay.active { display: flex; opacity: 1; pointer-events: all; }
 
 .modal {
   background: var(--surface);
@@ -1122,6 +1122,9 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
   .panel { padding: 14px; }
   .panel-header { flex-direction: column; align-items: flex-start; gap: 8px; }
   .axis-selectors { flex-wrap: wrap; }
+  .copilot-panel { width: 100%; right: -100%; }
+  .copilot-panel.open { right: 0; }
+  .copilot-fab { bottom: 16px; right: 16px; width: 46px; height: 46px; font-size: 20px; }
 }
 
 /* Accessibility — focus-visible */
@@ -1934,7 +1937,7 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
     <h3><span class="ai-dot"></span>AI Copilot</h3>
     <button class="copilot-close" onclick="toggleCopilot()">✕</button>
   </div>
-  <div id="copilotBody">
+  <div id="copilotBody" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
     <!-- Setup view (shown when no API key) -->
     <div class="copilot-setup" id="copilotSetup">
       <h4>Connect an AI model</h4>
@@ -1981,7 +1984,10 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
         </div>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
           <div class="copilot-privacy" style="text-align:left">Powered by <span id="copilotProviderLabel">AI</span></div>
-          <button style="background:none;border:none;color:var(--text2);font-size:11px;cursor:pointer;text-decoration:underline" onclick="resetCopilotKey()">Change API key</button>
+          <span style="display:flex;gap:12px">
+            <button style="background:none;border:none;color:var(--text2);font-size:11px;cursor:pointer;text-decoration:underline" onclick="clearCopilotChat()">Clear chat</button>
+            <button style="background:none;border:none;color:var(--text2);font-size:11px;cursor:pointer;text-decoration:underline" onclick="resetCopilotKey()">Change key</button>
+          </span>
         </div>
       </div>
     </div>
@@ -4095,6 +4101,8 @@ document.addEventListener('keydown', (e) => {
     else selectedMolIdx = Math.max(selectedMolIdx - 1, 0);
     renderAll();
   } else if (e.key === 'Escape') {
+    closeCiteModal();
+    if (copilotOpen) toggleCopilot();
     selectedMolIdx = null;
     renderAll();
   }
@@ -4402,9 +4410,17 @@ function resetCopilotKey() {
   copilotKey = null;
   copilotHistory = [];
   document.getElementById('copilotMessages').innerHTML = '<div class="copilot-msg system">AI copilot ready. Ask anything about your molecules.</div>';
+  document.getElementById('copilotSuggestions').style.display = 'flex';
   document.querySelectorAll('.provider-btn').forEach(b => b.classList.remove('selected'));
   document.getElementById('copilotKeyInput').value = '';
   updateCopilotUI();
+}
+
+function clearCopilotChat() {
+  copilotHistory = [];
+  document.getElementById('copilotMessages').innerHTML = '<div class="copilot-msg system">AI copilot ready. Ask anything about your molecules.</div>';
+  document.getElementById('copilotSuggestions').style.display = 'flex';
+  showToast('Chat cleared');
 }
 
 function buildSystemPrompt() {
@@ -4442,6 +4458,8 @@ ANALYSIS NOTES:
 - Lipinski Ro5: MW≤500, LogP≤5, HBD≤5, HBA≤10
 - Veber: RotBonds≤10, TPSA≤140
 - BBB penetration favors: TPSA<79, LogP 1-3
+
+CURRENT VIEW: The user is looking at the "${VIEW_NAMES[currentView] || currentView}" tab.
 
 INSTRUCTIONS:
 - Give specific, actionable advice referencing the actual molecule data above
@@ -4624,11 +4642,15 @@ function exportFigure() {
   } else if (currentView === 'similarity') {
     sourceCanvas = document.getElementById('simHeatmap');
   } else if (['pareto', 'radar', 'compare'].includes(currentView)) {
-    // Chart.js views -- find the first chart canvas in the content area
-    const container = document.getElementById('contentArea');
-    if (container) {
-      const canvases = container.querySelectorAll('canvas');
-      if (canvases.length > 0) sourceCanvas = canvases[0];
+    // Chart.js views -- use first tracked chart instance for best quality
+    if (chartInstances.length > 0) {
+      sourceCanvas = chartInstances[0].canvas;
+    } else {
+      const container = document.getElementById('content');
+      if (container) {
+        const canvases = container.querySelectorAll('canvas');
+        if (canvases.length > 0) sourceCanvas = canvases[0];
+      }
     }
   }
 
@@ -4714,10 +4736,6 @@ function copyCitation() {
   const text = document.getElementById('citationText').textContent;
   navigator.clipboard.writeText(text).then(() => showToast('Citation copied!')).catch(() => {});
 }
-
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') closeCiteModal();
-});
 
 // ---- Boot ----
 let hasURLMolecules = loadFromURL();
