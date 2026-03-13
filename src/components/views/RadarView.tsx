@@ -1,4 +1,3 @@
-import { useRef } from 'react';
 import { Radar } from 'react-chartjs-2';
 import type { Molecule } from '../../utils/types';
 import { PROPERTIES } from '../../utils/types';

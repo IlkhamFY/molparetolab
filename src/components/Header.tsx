@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Share, Download, FileText, Star, MessageSquare } from 'lucide-react';
 
 const Header = ({ moleculeCount }: { moleculeCount: number }) => {

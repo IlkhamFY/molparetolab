@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import type { Molecule } from '../../utils/types';
+import type { Molecule } from '../utils/types';
 import ParetoView from './views/ParetoView';
 import ScoringView from './views/ScoringView';
 import ParallelView from './views/ParallelView';
 import CompareView from './views/CompareView';
 import RadarView from './views/RadarView';
 import TableView from './views/TableView';
+import EggView from './views/EggView';
 
 export default function Content({ molecules, compareIndices, selectedMolIdx }: { molecules: Molecule[], compareIndices: number[], selectedMolIdx: number | null }) {
   const [activeTab, setActiveTab] = useState('pareto');

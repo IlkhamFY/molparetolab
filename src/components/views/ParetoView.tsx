@@ -105,7 +105,7 @@ export default function ParetoView({ molecules }: { molecules: Molecule[] }) {
               </div>
             </div>
             <div className="flex-1 relative">
-               <ScatterChart molecules={molecules} activeFilters={activeFilters} xKey={axis.x} yKey={axis.y} />
+               <ScatterChart molecules={molecules} xKey={axis.x} yKey={axis.y} />
             </div>
           </div>
         ))}
@@ -121,12 +121,12 @@ export default function ParetoView({ molecules }: { molecules: Molecule[] }) {
   );
 }
 
-function ScatterChart({ molecules, activeFilters, xKey, yKey }: { molecules: Molecule[], activeFilters: Set<string>, xKey: keyof Molecule['props'], yKey: keyof Molecule['props'] }) {
+function ScatterChart({ molecules, xKey, yKey }: { molecules: Molecule[], xKey: keyof Molecule['props'], yKey: keyof Molecule['props'] }) {
   const data = useMemo(() => {
     const passData: any[] = [];
     const failData: any[] = [];
     
-    molecules.forEach((m, i) => {
+    molecules.forEach((m) => {
       const pt = { x: m.props[xKey], y: m.props[yKey], label: m.name };
       if (m.filters.lipinski?.pass) passData.push(pt); 
       else failData.push(pt);

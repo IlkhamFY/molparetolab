@@ -9,7 +9,7 @@ interface SidebarProps {
   selectedMolIdx: number | null;
   setSelectedMolIdx: (idx: number | null) => void;
   compareIndices: number[];
-  setCompareIndices: (indices: number[]) => void;
+  setCompareIndices: React.Dispatch<React.SetStateAction<number[]>>;
 }
 
 export default function Sidebar({ 

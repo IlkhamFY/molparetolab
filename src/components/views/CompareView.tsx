@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react';
 import { Bar } from 'react-chartjs-2';
 import type { Molecule } from '../../utils/types';
 import { DRUG_FILTERS } from '../../utils/types';

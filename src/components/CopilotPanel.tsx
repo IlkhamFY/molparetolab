@@ -1,6 +1,13 @@
 import { X } from 'lucide-react';
+import type { Molecule } from '../utils/types';
 
-export default function CopilotPanel({ isOpen, onClose, molecules }) {
+interface CopilotPanelProps {
+  isOpen: boolean;
+  onClose: () => void;
+  molecules: Molecule[];
+}
+
+export default function CopilotPanel({ isOpen, onClose }: CopilotPanelProps) {
   return (
     <div
       className={`fixed top-0 right-0 w-[420px] h-screen bg-[#22201F] border-l border-white/5 z-50 flex flex-col transition-transform duration-300 ease-in-out ${

@@ -185,7 +185,7 @@ export default function ParallelView({ molecules }: { molecules: Molecule[] }) {
       drawParallelCoords();
     };
 
-    canvas.onmousemove = (e) => {
+    canvas.onmousemove = (_e) => {
       // Not handling full molecule tooltips in Parallel Coordinates yet to save space + complexity,
       // just implementing the core brushing functionality.
       if (isDragging) return;

@@ -166,7 +166,7 @@ function DominanceMatrix({ molecules }: { molecules: Molecule[] }) {
               </div>
               
               {/* Row Cells */}
-              {molecules.map((colMol, j) => {
+              {molecules.map((_colMol, j) => {
                 let cellClass = 'bg-[#12121a] text-[#555]';
                 let cellText = '~';
 
