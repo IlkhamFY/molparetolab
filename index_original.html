@@ -1,0 +1,4818 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MolParetoLab - Multi-Objective Molecule Analysis</title>
+<meta name="description" content="Paste SMILES or upload SDF files for instant multi-objective Pareto analysis across drug-likeness properties. BOILED-Egg plot, multi-filter overlays, molecule comparison. Runs entirely client-side via RDKit WASM.">
+<meta property="og:title" content="MolParetoLab — Multi-Objective Molecule Analysis">
+<meta property="og:description" content="Explore Pareto fronts across drug-likeness properties. BOILED-Egg BBB/GI plot. Paste SMILES, upload SDF, share via URL. 100% client-side.">
+<meta property="og:image" content="https://raw.githubusercontent.com/IlkhamFY/molparetolab/main/screenshots/pareto-scatter.jpg">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://molparetolab.ilkham.com">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="MolParetoLab — Multi-Objective Molecule Analysis">
+<meta name="twitter:description" content="Paste SMILES, explore Pareto fronts across drug-likeness properties. BOILED-Egg BBB/GI plot. 100% client-side via RDKit WASM.">
+<meta name="twitter:image" content="https://raw.githubusercontent.com/IlkhamFY/molparetolab/main/screenshots/pareto-scatter.jpg">
+<script defer data-domain="molparetolab.ilkham.com" src="https://plausible.io/js/script.js"></script>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%230a0a0f'/%3E%3Ctext x='16' y='22' text-anchor='middle' font-family='system-ui' font-size='18' font-weight='700' fill='%2314b8a6'%3EMP%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/geist@5.0.1/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/geist@5.0.1/500.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/geist@5.0.1/600.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/geist@5.0.1/700.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/geist-mono@5.0.1/400.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fontsource/geist-mono@5.0.1/500.css">
+<script src="https://cdn.jsdelivr.net/npm/@rdkit/rdkit@2025.3.4-1.0.0/dist/RDKit_minimal.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.1.0/dist/chartjs-plugin-annotation.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lz-string@1.5.0/libs/lz-string.min.js"></script>
+<style>
+:root {
+  --bg: #09090b;
+  --surface: #111113;
+  --surface2: #18181b;
+  --border: #27272a;
+  --text: #e4e4e7;
+  --text2: #71717a;
+  --accent: #14b8a6;
+  --accent2: #2dd4bf;
+  --green: #22c55e;
+  --red: #ef4444;
+  --yellow: #eab308;
+  --orange: #f97316;
+  --cyan: #06b6d4;
+  --pink: #ec4899;
+  font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.header {
+  padding: 24px 32px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header h1 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+}
+
+.header h1 span { color: var(--accent2); }
+
+.header-left { display: flex; align-items: center; gap: 12px; }
+
+.header .subtitle {
+  font-size: 13px;
+  color: var(--text2);
+  margin-top: 2px;
+}
+
+.mol-count-badge {
+  font-size: 12px;
+  padding: 4px 12px;
+  border-radius: 12px;
+  background: rgba(20, 184, 166, 0.15);
+  color: var(--accent2);
+  font-weight: 600;
+  display: none;
+}
+
+.mol-count-badge.visible { display: inline-block; }
+
+.header-right {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.badge {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: var(--surface2);
+  color: var(--text2);
+  border: 1px solid var(--border);
+}
+
+.main {
+  display: grid;
+  grid-template-columns: 380px 1fr;
+  min-height: calc(100vh - 73px);
+}
+
+.sidebar {
+  border-right: 1px solid var(--border);
+  padding: 20px;
+  overflow-y: auto;
+  max-height: calc(100vh - 73px);
+}
+
+.content {
+  padding: 20px;
+  overflow-y: auto;
+  max-height: calc(100vh - 73px);
+}
+
+.section-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--text2);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+textarea {
+  width: 100%;
+  height: 140px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-family: 'Geist Mono', 'Fira Code', monospace;
+  font-size: 13px;
+  padding: 12px;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+textarea:focus { border-color: var(--accent); }
+
+textarea::placeholder { color: var(--text2); opacity: 0.5; }
+
+.btn {
+  padding: 10px 20px;
+  border-radius: 8px;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: white;
+  width: 100%;
+  justify-content: center;
+  margin-top: 12px;
+}
+
+.btn-primary:hover { background: var(--accent2); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-secondary {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.btn-secondary:hover { background: var(--border); }
+
+.examples {
+  margin-top: 16px;
+}
+
+.example-btn {
+  display: block;
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text2);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  margin-bottom: 6px;
+  transition: all 0.15s;
+}
+
+.example-btn:hover {
+  border-color: var(--accent);
+  color: var(--text);
+}
+
+.example-btn .name { color: var(--text); font-weight: 500; }
+
+.status {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text2);
+  min-height: 18px;
+}
+
+.status.error { color: var(--red); }
+.status.success { color: var(--green); }
+
+/* Loading overlay */
+.loading-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(10, 10, 15, 0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.loading-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.loading-molecule {
+  width: 60px;
+  height: 60px;
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.loading-molecule .atom {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  position: absolute;
+  animation: orbit 1.5s ease-in-out infinite;
+}
+
+.loading-molecule .atom:nth-child(1) {
+  background: var(--accent);
+  top: 0; left: 24px;
+  animation-delay: 0s;
+}
+
+.loading-molecule .atom:nth-child(2) {
+  background: var(--green);
+  top: 24px; left: 48px;
+  animation-delay: 0.25s;
+}
+
+.loading-molecule .atom:nth-child(3) {
+  background: var(--cyan);
+  top: 48px; left: 36px;
+  animation-delay: 0.5s;
+}
+
+.loading-molecule .atom:nth-child(4) {
+  background: var(--pink);
+  top: 48px; left: 12px;
+  animation-delay: 0.75s;
+}
+
+.loading-molecule .atom:nth-child(5) {
+  background: var(--yellow);
+  top: 24px; left: 0;
+  animation-delay: 1.0s;
+}
+
+.loading-molecule .core {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--accent2);
+  position: absolute;
+  top: 22px; left: 22px;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes orbit {
+  0%, 100% { transform: scale(1); opacity: 0.7; }
+  50% { transform: scale(1.4); opacity: 1; }
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.3); opacity: 1; }
+}
+
+.loading-text {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.loading-subtext {
+  color: var(--text2);
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+/* Molecule cards */
+.mol-list {
+  margin-top: 20px;
+}
+
+.mol-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 8px;
+  display: grid;
+  grid-template-columns: 80px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  transition: border-color 0.15s;
+  cursor: pointer;
+  position: relative;
+}
+
+.mol-card:hover { border-color: var(--accent); }
+.mol-card.selected { border-color: var(--accent); background: rgba(20, 184, 166, 0.05); }
+.mol-card.pareto { border-left: 3px solid var(--green); }
+.mol-card.compare-selected { border-color: var(--cyan); box-shadow: 0 0 0 1px var(--cyan); }
+
+.mol-compare-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--cyan);
+  color: white;
+  font-size: 11px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+}
+
+.mol-card.compare-selected .mol-compare-check { display: flex; }
+
+.mol-svg {
+  width: 80px;
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mol-svg svg { max-width: 100%; max-height: 100%; }
+
+.mol-info .mol-name {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.mol-info .mol-smiles {
+  font-size: 11px;
+  color: var(--text2);
+  font-family: monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.mol-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-end;
+}
+
+.mol-badge {
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.mol-badge.pass { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+.mol-badge.fail { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+.mol-badge.pareto-badge { background: rgba(20, 184, 166, 0.15); color: var(--accent2); }
+
+/* Content panels */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.panel-title {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.panel-subtitle {
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.chart-container {
+  position: relative;
+  height: 350px;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.tab {
+  padding: 6px 14px;
+  font-size: 13px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--text2);
+  transition: all 0.15s;
+  border: none;
+  background: none;
+}
+
+.tab:hover { color: var(--text); }
+.tab.tab-secondary { opacity: 0.5; }
+.tab.tab-secondary:hover { opacity: 0.8; }
+.tab.tab-secondary.active { opacity: 1; }
+.tab.active { background: var(--accent); color: white; }
+
+/* Property table */
+.prop-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.prop-table th {
+  text-align: left;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text2);
+  font-weight: 500;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.prop-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(42, 42, 58, 0.5);
+}
+
+.prop-table tr:hover { background: rgba(20, 184, 166, 0.03); }
+
+.prop-val { font-family: 'Geist Mono', monospace; font-size: 12px; }
+.prop-good { color: var(--green); }
+.prop-bad { color: var(--red); }
+.prop-warn { color: var(--yellow); }
+
+/* Dominance matrix */
+.dom-grid {
+  display: grid;
+  gap: 2px;
+  font-size: 11px;
+}
+
+.dom-cell {
+  padding: 6px;
+  text-align: center;
+  border-radius: 4px;
+  font-family: monospace;
+}
+
+.dom-header { color: var(--text2); font-weight: 600; }
+.dom-dominates { background: rgba(34, 197, 94, 0.15); color: var(--green); }
+.dom-dominated { background: rgba(239, 68, 68, 0.15); color: var(--red); }
+.dom-neutral { background: var(--surface2); color: var(--text2); }
+.dom-self { background: var(--surface); color: var(--text2); }
+
+/* Radar chart */
+.radar-container {
+  height: 300px;
+  position: relative;
+}
+
+/* Loading */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: var(--text2);
+  font-size: 14px;
+}
+
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-top: 2px solid var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 10px;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Empty state */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 50vh;
+  color: var(--text2);
+  text-align: center;
+}
+
+.empty-state h3 {
+  font-size: 17px;
+  margin-bottom: 6px;
+  color: var(--text);
+  font-weight: 500;
+  letter-spacing: -0.2px;
+}
+
+.empty-state p {
+  font-size: 13px;
+  max-width: 320px;
+  line-height: 1.6;
+  color: var(--text2);
+}
+
+/* Collapsed sidebar */
+.sidebar-input-section { transition: all 0.2s; }
+.sidebar-input-section.collapsed {
+  display: none;
+}
+
+.sidebar-expand-btn {
+  display: none;
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text2);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: center;
+  margin-bottom: 12px;
+  transition: all 0.15s;
+}
+
+.sidebar-expand-btn:hover { border-color: var(--accent); color: var(--text); }
+.sidebar-expand-btn.visible { display: block; }
+
+/* Summary line */
+.summary-line {
+  font-size: 13px;
+  color: var(--text2);
+  padding: 12px 0;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.summary-line .sl-num {
+  font-family: 'Geist Mono', monospace;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.summary-line .sl-pareto { color: var(--green); }
+.summary-line .sl-fail { color: var(--red); }
+.summary-line .sl-sep { color: var(--border); }
+
+/* Molecule verdict */
+.mol-verdict {
+  font-size: 10px;
+  color: var(--text2);
+  margin-top: 3px;
+  line-height: 1.4;
+  max-width: 200px;
+}
+
+.mol-verdict.good { color: var(--green); }
+.mol-verdict.warn { color: var(--yellow); }
+.mol-verdict.bad { color: var(--red); }
+
+/* Why Pareto tooltip */
+.why-pareto {
+  font-size: 10px;
+  color: var(--accent2);
+  margin-top: 2px;
+  cursor: help;
+  line-height: 1.4;
+}
+
+/* Copy summary button */
+.btn-copy-summary {
+  background: var(--surface2);
+  color: var(--text2);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  font-size: 11px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+
+.btn-copy-summary:hover { border-color: var(--accent); color: var(--text); }
+
+/* Show more scatter button */
+.scatter-expand-btn {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text2);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: center;
+  margin-top: 8px;
+  transition: all 0.15s;
+}
+
+.scatter-expand-btn:hover { border-color: var(--accent); color: var(--text); }
+
+/* Axis selectors */
+.axis-selectors {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+  font-size: 11px;
+  color: var(--text2);
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+.axis-selectors select {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 4px;
+  font-size: 11px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.15s;
+  max-width: 110px;
+}
+
+.axis-selectors select:hover { border-color: var(--accent); }
+.axis-selectors select:focus { border-color: var(--accent); }
+
+.legend-inline {
+  display: flex;
+  gap: 14px;
+  font-size: 11px;
+  color: var(--text2);
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+.legend-inline .legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.legend-inline .legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.legend-inline .legend-line {
+  width: 16px;
+  height: 2px;
+  display: inline-block;
+}
+
+/* Hero section */
+.hero {
+  padding: 32px 32px 24px;
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+
+.hero h2 {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  margin-bottom: 8px;
+}
+
+.hero p {
+  font-size: 14px;
+  color: var(--text2);
+  max-width: 500px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.hero-pill .pill-icon { font-size: 14px; }
+
+/* SDF Upload */
+.sdf-drop {
+  border: 2px dashed var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text2);
+}
+
+.sdf-drop:hover, .sdf-drop.dragover {
+  border-color: var(--accent);
+  background: rgba(20,184,166,0.05);
+  color: var(--text);
+}
+
+.sdf-drop .drop-icon {
+  font-size: 20px;
+  margin-bottom: 4px;
+  display: block;
+}
+
+.sdf-drop input[type="file"] { display: none; }
+
+/* Share button */
+.btn-share {
+  background: var(--surface2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 8px 14px;
+  font-size: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-share:hover { border-color: var(--accent); color: var(--accent2); }
+
+.btn-github {
+  background: var(--surface2);
+  color: var(--text2);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  font-size: 11px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: none;
+}
+
+.btn-github:hover { border-color: var(--text2); color: var(--text); }
+
+.btn-github svg { width: 14px; height: 14px; fill: currentColor; }
+
+/* Cite modal */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.modal-overlay.active { display: flex; opacity: 1; pointer-events: all; }
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+
+.modal-section {
+  margin-bottom: 16px;
+}
+
+.modal-section label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text2);
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.modal-section pre {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 12px;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+.modal-section .btn-copy {
+  margin-top: 8px;
+  background: var(--surface2);
+  color: var(--text2);
+  border: 1px solid var(--border);
+  padding: 6px 14px;
+  font-size: 11px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+
+.modal-section .btn-copy:hover { border-color: var(--accent); color: var(--accent2); }
+
+.toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--accent);
+  color: white;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 999;
+  transition: transform 0.3s ease;
+  pointer-events: none;
+}
+
+.toast.show { transform: translateX(-50%) translateY(0); }
+
+/* Filter toggles */
+.filter-toggles {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.filter-toggle {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 14px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  transition: all 0.15s;
+  user-select: none;
+}
+
+.filter-toggle:hover { border-color: var(--accent); color: var(--text); }
+.filter-toggle.active { background: rgba(20,184,166,0.15); border-color: var(--accent); color: var(--accent2); }
+
+.filter-toggle.active-green { background: rgba(34,197,94,0.15); border-color: var(--green); color: var(--green); }
+.filter-toggle.active-yellow { background: rgba(234,179,8,0.15); border-color: var(--yellow); color: var(--yellow); }
+.filter-toggle.active-cyan { background: rgba(6,182,212,0.15); border-color: var(--cyan); color: var(--cyan); }
+.filter-toggle.active-pink { background: rgba(236,72,153,0.15); border-color: var(--pink); color: var(--pink); }
+.filter-toggle.active-orange { background: rgba(249,115,22,0.15); border-color: var(--orange); color: var(--orange); }
+
+/* BOILED-Egg canvas */
+.egg-container {
+  position: relative;
+  height: 500px;
+}
+
+.egg-canvas-wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+/* Compare mode */
+.compare-bar {
+  background: var(--surface);
+  border: 1px solid var(--cyan);
+  border-radius: 8px;
+  padding: 10px 16px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.compare-bar .compare-info { display: flex; align-items: center; gap: 8px; }
+
+.compare-bar .compare-names {
+  font-weight: 500;
+  color: var(--cyan);
+}
+
+.compare-bar button {
+  font-size: 11px;
+  padding: 4px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  color: var(--text2);
+  transition: all 0.15s;
+}
+
+.compare-bar button:hover { border-color: var(--red); color: var(--red); }
+
+.comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.compare-mol-header {
+  text-align: center;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px;
+}
+
+.compare-mol-header .mol-name {
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.compare-mol-header .mol-smiles {
+  font-size: 11px;
+  color: var(--text2);
+  font-family: monospace;
+  margin-top: 4px;
+}
+
+.compare-bar-chart {
+  height: 350px;
+  position: relative;
+}
+
+.compare-prop-row {
+  display: grid;
+  grid-template-columns: 80px 1fr 60px 60px 1fr 80px;
+  gap: 4px;
+  align-items: center;
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(42,42,58,0.3);
+  font-size: 12px;
+}
+
+.compare-prop-name {
+  font-weight: 500;
+  color: var(--text2);
+  text-align: right;
+  padding-right: 8px;
+}
+
+.compare-prop-val {
+  font-family: 'Geist Mono', monospace;
+  font-size: 12px;
+  text-align: center;
+}
+
+.compare-bar-visual {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--border);
+  position: relative;
+  overflow: hidden;
+}
+
+.compare-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.compare-bar-fill.left { float: right; }
+
+.compare-winner { font-weight: 600; }
+
+/* Keyboard shortcut hint */
+.kbd-hint {
+  font-size: 10px;
+  color: var(--text2);
+  margin-top: 4px;
+  opacity: 0.6;
+}
+
+.kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--surface2);
+  font-family: monospace;
+  font-size: 10px;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .main { grid-template-columns: 1fr; }
+  .sidebar { max-height: none; }
+  .hero { padding: 32px 20px 28px; }
+  .hero h2 { font-size: 24px; }
+  .comparison-grid { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 768px) {
+  .main {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto 1fr;
+  }
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: none;
+    padding: 12px 16px;
+    overflow-y: visible;
+  }
+  .sidebar-expand-btn.visible { display: block; }
+  .content { padding: 12px 16px; max-height: none; }
+  .header { padding: 16px; flex-wrap: wrap; gap: 8px; }
+  .header h1 { font-size: 17px; }
+  .header .subtitle { font-size: 11px; }
+  .hero { padding: 20px 16px 16px; }
+  .hero h2 { font-size: 20px; }
+  .hero p { font-size: 12px; }
+  .tabs { gap: 2px; }
+  .tab { padding: 5px 10px; font-size: 12px; }
+  .row { flex-direction: column; }
+  .row > .panel { min-width: unset !important; }
+  .chart-container { height: 280px; }
+  .comparison-grid { grid-template-columns: 1fr; }
+  .compare-prop-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 4px;
+    font-size: 11px;
+  }
+  .mol-card {
+    grid-template-columns: 60px 1fr auto;
+    gap: 8px;
+    padding: 8px;
+  }
+  .mol-svg { width: 60px; height: 45px; }
+  .mol-info .mol-smiles { max-width: 140px; }
+  .panel { padding: 14px; }
+  .panel-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .axis-selectors { flex-wrap: wrap; }
+  .copilot-panel { width: 100%; right: -100%; }
+  .copilot-panel.open { right: 0; }
+  .copilot-fab { bottom: 16px; right: 16px; width: 46px; height: 46px; font-size: 20px; }
+}
+
+/* Accessibility — focus-visible */
+.tab:focus-visible,
+.mol-card:focus-visible,
+.btn:focus-visible,
+.btn-primary:focus-visible,
+.btn-secondary:focus-visible,
+.example-btn:focus-visible,
+.filter-toggle:focus-visible,
+.profile-btn:focus-visible,
+.btn-share:focus-visible,
+.btn-copy-summary:focus-visible,
+.scatter-expand-btn:focus-visible,
+.sidebar-expand-btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text2); }
+
+.row { display: flex; gap: 16px; }
+.row > * { flex: 1; }
+
+/* Hover structure tooltip */
+.mol-hover-tooltip {
+  position: fixed;
+  z-index: 2000;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  max-width: 260px;
+}
+
+.mol-hover-tooltip.visible { opacity: 1; }
+
+.mol-hover-tooltip .tooltip-svg {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+
+.mol-hover-tooltip .tooltip-svg svg { max-width: 180px; max-height: 120px; }
+
+.mol-hover-tooltip .tooltip-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+.mol-hover-tooltip .tooltip-props {
+  font-size: 11px;
+  color: var(--text2);
+  font-family: 'Geist Mono', monospace;
+  text-align: center;
+}
+
+.mol-hover-tooltip .tooltip-pareto {
+  font-size: 10px;
+  text-align: center;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  display: inline-block;
+}
+
+/* Parallel coordinates */
+.parallel-container {
+  position: relative;
+  height: 500px;
+}
+
+.parallel-legend {
+  display: flex;
+  gap: 16px;
+  font-size: 11px;
+  color: var(--text2);
+  margin-top: 8px;
+  flex-wrap: wrap;
+}
+
+/* Scoring view */
+.scoring-profiles {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.profile-btn {
+  font-size: 11px;
+  padding: 6px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text2);
+  transition: all 0.15s;
+  font-weight: 500;
+}
+
+.profile-btn:hover { border-color: var(--accent); color: var(--text); }
+.profile-btn.active { background: var(--accent); color: white; border-color: var(--accent); }
+
+.weight-slider-row {
+  display: grid;
+  grid-template-columns: 100px 1fr 50px;
+  gap: 12px;
+  align-items: center;
+  padding: 6px 0;
+}
+
+.weight-slider-row label {
+  font-size: 12px;
+  color: var(--text2);
+  font-weight: 500;
+}
+
+.weight-slider-row input[type="range"] {
+  width: 100%;
+  height: 4px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.weight-slider-row input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--bg);
+}
+
+.weight-slider-row input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  cursor: pointer;
+  border: 2px solid var(--bg);
+}
+
+.weight-slider-row .weight-val {
+  font-size: 12px;
+  font-family: 'Geist Mono', monospace;
+  color: var(--accent2);
+  text-align: right;
+}
+
+.scoring-rank-list {
+  margin-top: 16px;
+}
+
+.scoring-rank-item {
+  display: grid;
+  grid-template-columns: 32px 1fr 60px;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  transition: border-color 0.15s;
+}
+
+.scoring-rank-item:first-child { border-color: var(--green); }
+.scoring-rank-item.is-pareto { border-left: 3px solid var(--green); }
+
+.scoring-rank-num {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text2);
+  text-align: center;
+}
+
+.scoring-rank-item:first-child .scoring-rank-num { color: var(--green); }
+
+.scoring-rank-info .rank-name {
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.scoring-rank-info .rank-bar-wrap {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.scoring-rank-info .rank-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+
+.scoring-rank-info .rank-detail {
+  font-size: 10px;
+  color: var(--text2);
+  margin-top: 3px;
+}
+
+.scoring-rank-score {
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Geist Mono', monospace;
+  text-align: right;
+}
+
+/* Similarity heatmap */
+.sim-heatmap-container {
+  position: relative;
+  overflow-x: auto;
+}
+
+.sim-diversity-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: var(--surface2);
+  border-radius: 8px;
+  margin-bottom: 16px;
+}
+
+.sim-diversity-score {
+  font-size: 32px;
+  font-weight: 700;
+  font-family: 'Geist Mono', monospace;
+}
+
+.sim-pair {
+  display: grid;
+  grid-template-columns: 80px 1fr 80px 60px;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+
+.sim-pair .pair-svgs {
+  display: flex;
+  gap: 4px;
+}
+
+.sim-pair .pair-svgs svg { max-width: 70px; max-height: 50px; }
+
+.sim-pair .pair-info .pair-names {
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 2px;
+}
+
+.sim-pair .pair-info .pair-detail {
+  font-size: 10px;
+  color: var(--text2);
+}
+
+.sim-pair .pair-score {
+  font-size: 16px;
+  font-weight: 700;
+  font-family: 'Geist Mono', monospace;
+  text-align: right;
+}
+
+/* Activity cliffs */
+.cliff-item {
+  display: grid;
+  grid-template-columns: 160px 1fr 80px;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 6px;
+}
+
+.cliff-item .cliff-svgs {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.cliff-item .cliff-svgs svg { max-width: 70px; max-height: 50px; }
+
+.cliff-item .cliff-info .cliff-names {
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 3px;
+}
+
+.cliff-item .cliff-info .cliff-detail {
+  font-size: 10px;
+  color: var(--text2);
+  line-height: 1.5;
+}
+
+.cliff-bar {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.cliff-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--yellow), var(--red));
+}
+
+.cliff-item .cliff-score {
+  font-size: 18px;
+  font-weight: 700;
+  font-family: 'Geist Mono', monospace;
+  text-align: right;
+  color: var(--orange);
+}
+
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--text2);
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* ---- AI Copilot Panel ---- */
+.copilot-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #0d9488);
+  border: none;
+  color: white;
+  font-size: 22px;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(20,184,166,0.4);
+  z-index: 1500;
+  transition: all 0.2s;
+  display: none;
+}
+
+.copilot-fab.visible { display: flex; align-items: center; justify-content: center; }
+.copilot-fab:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(20,184,166,0.55); }
+
+.copilot-panel {
+  position: fixed;
+  top: 0;
+  right: -420px;
+  width: 420px;
+  height: 100vh;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  transition: right 0.3s ease;
+}
+
+.copilot-panel.open { right: 0; }
+
+.copilot-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.copilot-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.copilot-header h3 .ai-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.copilot-close {
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.copilot-close:hover { color: var(--text); background: var(--surface2); }
+
+.copilot-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.copilot-msg {
+  max-width: 90%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  word-wrap: break-word;
+}
+
+.copilot-msg.user {
+  align-self: flex-end;
+  background: var(--accent);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.copilot-msg.ai {
+  align-self: flex-start;
+  background: var(--surface2);
+  color: var(--text);
+  border-bottom-left-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+.copilot-msg.ai pre {
+  background: var(--bg);
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  margin: 6px 0;
+  overflow-x: auto;
+  font-family: 'Geist Mono', monospace;
+}
+
+.copilot-msg.ai code {
+  background: var(--bg);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: 'Geist Mono', monospace;
+}
+
+.copilot-msg.ai strong { color: var(--accent2); }
+
+.copilot-msg.system {
+  align-self: center;
+  background: none;
+  color: var(--text2);
+  font-size: 11px;
+  text-align: center;
+  padding: 4px;
+}
+
+.copilot-suggestions {
+  padding: 8px 20px 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.copilot-suggestions button {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  padding: 6px 12px;
+  font-size: 11px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.copilot-suggestions button:hover {
+  border-color: var(--accent);
+  color: var(--accent2);
+}
+
+.copilot-input-area {
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.copilot-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.copilot-input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 13px;
+  padding: 10px 14px;
+  outline: none;
+  font-family: 'Geist', system-ui, sans-serif;
+  resize: none;
+  min-height: 40px;
+  max-height: 120px;
+}
+
+.copilot-input:focus { border-color: var(--accent); }
+
+.copilot-send {
+  background: var(--accent);
+  border: none;
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.copilot-send:hover { background: var(--accent2); }
+.copilot-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* API key setup within copilot */
+.copilot-setup {
+  padding: 24px 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.copilot-setup h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.copilot-setup p {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.6;
+}
+
+.copilot-setup .provider-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  width: 100%;
+  text-align: left;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.copilot-setup .provider-btn:hover { border-color: var(--accent); }
+.copilot-setup .provider-btn.selected { border-color: var(--accent); background: rgba(20,184,166,0.1); }
+
+.copilot-setup .provider-btn .provider-name { font-weight: 600; }
+.copilot-setup .provider-btn .provider-desc { font-size: 11px; color: var(--text2); }
+
+.copilot-key-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  padding: 10px 14px;
+  outline: none;
+  font-family: 'Geist Mono', monospace;
+}
+
+.copilot-key-input:focus { border-color: var(--accent); }
+
+.copilot-save-key {
+  background: var(--accent);
+  border: none;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.copilot-save-key:hover { background: var(--accent2); }
+
+.copilot-privacy {
+  font-size: 10px;
+  color: var(--text2);
+  text-align: center;
+  line-height: 1.5;
+  opacity: 0.7;
+}
+
+.typing-indicator {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.typing-indicator span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text2);
+  animation: typing 1.2s ease-in-out infinite;
+}
+
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing {
+  0%, 100% { opacity: 0.3; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-3px); }
+}
+</style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-molecule">
+    <div class="atom"></div>
+    <div class="atom"></div>
+    <div class="atom"></div>
+    <div class="atom"></div>
+    <div class="atom"></div>
+    <div class="core"></div>
+  </div>
+  <div class="loading-text" id="loadingText">Computing molecular properties...</div>
+  <div class="loading-subtext" id="loadingSubtext">RDKit WASM is crunching descriptors</div>
+</div>
+
+<div class="header">
+  <div class="header-left">
+    <div>
+      <h1>Mol<span>Pareto</span>Lab</h1>
+      <div class="subtitle">multi-objective molecule analysis</div>
+    </div>
+    <span class="mol-count-badge" id="molCountBadge">0 molecules</span>
+  </div>
+  <div class="header-right">
+    <button class="btn-share" onclick="shareURL()" id="shareBtn" style="display:none">Share URL</button>
+    <button class="btn-share" onclick="exportFigure()" id="exportFigBtn" style="display:none">📷 Export Figure</button>
+    <button class="btn-share" onclick="exportCSV()" id="exportBtn" style="display:none">Export CSV</button>
+    <button class="btn-share" onclick="openCiteModal()" id="citeBtn" style="display:none">Cite</button>
+    <a href="https://github.com/IlkhamFY/molparetolab" target="_blank" rel="noopener" class="btn-github"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>Star</a>
+    <a href="https://github.com/IlkhamFY/molparetolab/issues" target="_blank" rel="noopener" class="btn-github" style="text-decoration:none">Feedback</a>
+  </div>
+</div>
+
+<!-- Cite Modal -->
+<div class="modal-overlay" id="citeModal" aria-hidden="true" onclick="if(event.target===this)closeCiteModal()">
+  <div class="modal">
+    <h3>Cite MolParetoLab</h3>
+    <div class="modal-section">
+      <label>BibTeX</label>
+      <pre id="bibtexText">@misc{yabbarov2026molparetolab,
+  author = {Yabbarov, Ilkham},
+  title = {{MolParetoLab}: Interactive Multi-Objective {Pareto} Analysis for Drug Discovery},
+  year = {2026},
+  url = {https://molparetolab.ilkham.com},
+  note = {Client-side web tool using RDKit.js WebAssembly. Open source: https://github.com/IlkhamFY/molparetolab}
+}</pre>
+      <button class="btn-copy" onclick="copyBibtex()">Copy BibTeX</button>
+    </div>
+    <div class="modal-section">
+      <label>Plain Text</label>
+      <pre id="citationText">Yabbarov, I. (2026). MolParetoLab: Interactive Multi-Objective Pareto Analysis for Drug Discovery. Available at https://molparetolab.ilkham.com</pre>
+      <button class="btn-copy" onclick="copyCitation()">Copy Citation</button>
+    </div>
+  </div>
+</div>
+
+<div class="hero" id="heroSection">
+  <h2>Paste molecules. See trade-offs.</h2>
+  <p>Multi-objective Pareto analysis across drug-likeness properties. Client-side via RDKit WASM — nothing leaves your browser.</p>
+</div>
+
+<div id="toast" class="toast"></div>
+<div class="mol-hover-tooltip" id="molHoverTooltip">
+  <div class="tooltip-svg" id="tooltipSvg"></div>
+  <div class="tooltip-name" id="tooltipName"></div>
+  <div class="tooltip-props" id="tooltipProps"></div>
+</div>
+
+<div class="main">
+  <div class="sidebar">
+    <button class="sidebar-expand-btn" id="sidebarExpandBtn" onclick="toggleSidebarInput()">Edit input</button>
+    <div class="sidebar-input-section" id="sidebarInputSection">
+      <div class="section-label">Input SMILES</div>
+      <textarea id="smilesInput" placeholder="paste SMILES (one per line, optionally with name after space)&#10;&#10;CCO ethanol&#10;c1ccccc1 benzene&#10;CC(=O)Oc1ccccc1C(=O)O aspirin"></textarea>
+      <button class="btn btn-primary" id="analyzeBtn" onclick="analyze()" disabled aria-label="Analyze molecules">
+        <span class="spinner" style="margin:0;display:inline-block;width:14px;height:14px"></span>
+        loading rdkit...
+      </button>
+      <div class="kbd-hint"><kbd class="kbd">Enter</kbd> to analyze · <kbd class="kbd">Shift+Enter</kbd> new line</div>
+      <div class="status" id="status"></div>
+
+      <div class="examples">
+        <div class="section-label" style="margin-top:16px">Quick Load</div>
+        <button class="example-btn" onclick="loadExample('druglike')">
+          <span class="name">Drug-like set</span> — 8 approved drugs
+        </button>
+        <button class="example-btn" onclick="loadExample('lipinski')">
+          <span class="name">Lipinski edge cases</span> — pass/fail boundary
+        </button>
+        <button class="example-btn" onclick="loadExample('diverse')">
+          <span class="name">Diverse chemical space</span> — fragments to macrocycles
+        </button>
+        <button class="example-btn" onclick="loadExample('kinase')">
+          <span class="name">Kinase inhibitors</span> — imatinib family
+        </button>
+      </div>
+
+      <div class="section-label" style="margin-top:16px">Upload SDF</div>
+      <div class="sdf-drop" id="sdfDrop" onclick="document.getElementById('sdfFile').click()"
+           ondragover="event.preventDefault();this.classList.add('dragover')"
+           ondragleave="this.classList.remove('dragover')"
+           ondrop="event.preventDefault();this.classList.remove('dragover');handleSDFDrop(event)">
+        Drag &amp; drop .sdf file or click to browse
+        <input type="file" id="sdfFile" accept=".sdf,.sd" onchange="handleSDFFile(this.files[0])">
+      </div>
+    </div>
+
+    <!-- Compare mode indicator -->
+    <div id="compareModeHint" style="margin-top:12px;display:none">
+      <div class="section-label">Compare Mode</div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:6px">
+        Right-click molecules to select for comparison (pick 2)
+      </div>
+    </div>
+
+    <div class="mol-list" id="molList"></div>
+  </div>
+
+  <div class="content" id="content">
+    <div class="empty-state">
+      <h3>Paste molecules to begin analysis</h3>
+      <p>Enter SMILES in the sidebar or load an example set.</p>
+    </div>
+  </div>
+</div>
+
+<!-- AI Copilot FAB -->
+<button class="copilot-fab" id="copilotFab" onclick="toggleCopilot()" title="AI Copilot">✨</button>
+
+<!-- AI Copilot Panel -->
+<div class="copilot-panel" id="copilotPanel">
+  <div class="copilot-header">
+    <h3><span class="ai-dot"></span>AI Copilot</h3>
+    <button class="copilot-close" onclick="toggleCopilot()">✕</button>
+  </div>
+  <div id="copilotBody" style="display:flex;flex-direction:column;flex:1;overflow:hidden">
+    <!-- Setup view (shown when no API key) -->
+    <div class="copilot-setup" id="copilotSetup">
+      <h4>Connect an AI model</h4>
+      <p>Your API key is stored locally in your browser. It never leaves your machine and is never sent to our servers. MolParetoLab has no backend.</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="provider-btn" onclick="selectProvider('google')" id="provBtn-google">
+          <div>
+            <div class="provider-name">Google Gemini</div>
+            <div class="provider-desc">Free tier available. Get key at aistudio.google.com</div>
+          </div>
+        </button>
+        <button class="provider-btn" onclick="selectProvider('openai')" id="provBtn-openai">
+          <div>
+            <div class="provider-name">OpenAI</div>
+            <div class="provider-desc">GPT-4o / GPT-4o-mini. Pay-as-you-go.</div>
+          </div>
+        </button>
+        <button class="provider-btn" onclick="selectProvider('anthropic')" id="provBtn-anthropic">
+          <div>
+            <div class="provider-name">Anthropic</div>
+            <div class="provider-desc">Claude Sonnet / Haiku. Pay-as-you-go.</div>
+          </div>
+        </button>
+      </div>
+      <input class="copilot-key-input" id="copilotKeyInput" type="password" placeholder="Paste your API key here">
+      <button class="copilot-save-key" onclick="saveCopilotKey()">Connect</button>
+      <div class="copilot-privacy">🔒 Key stored in localStorage only. 100% client-side. We have zero servers.</div>
+    </div>
+    <!-- Chat view (shown when key is set) -->
+    <div id="copilotChat" style="display:none;flex:1;flex-direction:column;height:100%">
+      <div class="copilot-messages" id="copilotMessages">
+        <div class="copilot-msg system">AI copilot ready. Ask anything about your molecules.</div>
+      </div>
+      <div class="copilot-suggestions" id="copilotSuggestions">
+        <button onclick="askSuggestion(this)">Which molecule should I prioritize?</button>
+        <button onclick="askSuggestion(this)">Explain the Pareto rankings</button>
+        <button onclick="askSuggestion(this)">Suggest modifications for #1</button>
+        <button onclick="askSuggestion(this)">Write a paragraph for my paper</button>
+      </div>
+      <div class="copilot-input-area">
+        <div class="copilot-input-row">
+          <textarea class="copilot-input" id="copilotInput" placeholder="Ask about your molecules..." rows="1"></textarea>
+          <button class="copilot-send" id="copilotSendBtn" onclick="sendCopilotMessage()">→</button>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+          <div class="copilot-privacy" style="text-align:left">Powered by <span id="copilotProviderLabel">AI</span></div>
+          <span style="display:flex;gap:12px">
+            <button style="background:none;border:none;color:var(--text2);font-size:11px;cursor:pointer;text-decoration:underline" onclick="clearCopilotChat()">Clear chat</button>
+            <button style="background:none;border:none;color:var(--text2);font-size:11px;cursor:pointer;text-decoration:underline" onclick="resetCopilotKey()">Change key</button>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---- State ----
+let RDKitModule = null;
+let molecules = [];
+let charts = {};
+let selectedMolIdx = null;
+let currentView = 'pareto';
+let compareIndices = []; // indices of 2 molecules selected for comparison
+let activeFilters = new Set(['lipinski']); // default filter
+let pcBrushes = {}; // parallel coords brushes: { axisKey: [min, max] }
+let sidebarCollapsed = false; // collapse input section after analysis
+let showAllScatters = false; // show 2 vs 6 scatter plots
+let chartInstances = []; // track Chart.js instances for cleanup
+
+// ---- Scoring profiles ----
+const SCORING_PROFILES = {
+  druglike:  { label: 'Drug-like',           weights: { MW: 0.20, LogP: 0.20, HBD: 0.15, HBA: 0.15, TPSA: 0.15, RotBonds: 0.15 } },
+  cns:       { label: 'CNS Drug',            weights: { MW: 0.20, LogP: 0.25, HBD: 0.15, HBA: 0.05, TPSA: 0.30, RotBonds: 0.05 } },
+  oral:      { label: 'Oral Bioavailability', weights: { MW: 0.20, LogP: 0.15, HBD: 0.10, HBA: 0.05, TPSA: 0.25, RotBonds: 0.25 } },
+  leadlike:  { label: 'Lead-like',            weights: { MW: 0.30, LogP: 0.25, HBD: 0.10, HBA: 0.10, TPSA: 0.05, RotBonds: 0.20 } },
+  custom:    { label: 'Custom',               weights: { MW: 0.17, LogP: 0.17, HBD: 0.17, HBA: 0.17, TPSA: 0.16, RotBonds: 0.16 } },
+};
+let currentProfile = 'druglike';
+let scoringWeights = { ...SCORING_PROFILES.druglike.weights };
+
+// ---- Property definitions ----
+const PROPERTIES = [
+  { key: 'MW', label: 'Mol Weight', unit: 'Da', lipinski: { max: 500 }, direction: 'lower' },
+  { key: 'LogP', label: 'cLogP', unit: '', lipinski: { max: 5 }, direction: 'lower' },
+  { key: 'HBD', label: 'H-Bond Donors', unit: '', lipinski: { max: 5 }, direction: 'lower' },
+  { key: 'HBA', label: 'H-Bond Acceptors', unit: '', lipinski: { max: 10 }, direction: 'lower' },
+  { key: 'TPSA', label: 'TPSA', unit: 'Å²', lipinski: { max: 140 }, direction: 'lower' },
+  { key: 'RotBonds', label: 'Rot. Bonds', unit: '', lipinski: { max: 10 }, direction: 'lower' },
+  { key: 'FrCSP3', label: 'Frac sp3', unit: '', direction: 'higher' },
+  { key: 'Rings', label: 'Ring Count', unit: '', direction: 'neutral' },
+  { key: 'AromaticRings', label: 'Aromatic Rings', unit: '', direction: 'neutral' },
+  { key: 'HeavyAtoms', label: 'Heavy Atoms', unit: '', direction: 'lower' },
+  { key: 'MR', label: 'Molar Refractivity', unit: '', direction: 'neutral' },
+  { key: 'NumAtoms', label: 'Atom Count', unit: '', direction: 'neutral' },
+];
+
+const COLORS = ['#2dd4bf','#22c55e','#ef4444','#eab308','#06b6d4','#ec4899','#f97316','#8b5cf6','#a3e635','#f43f5e','#84cc16','#a855f7'];
+
+// ---- Drug-likeness filter definitions ----
+const DRUG_FILTERS = {
+  lipinski: {
+    label: 'Lipinski Ro5',
+    color: 'green',
+    rules: [
+      { key: 'MW', op: '<=', val: 500 },
+      { key: 'LogP', op: '<=', val: 5 },
+      { key: 'HBD', op: '<=', val: 5 },
+      { key: 'HBA', op: '<=', val: 10 },
+    ],
+    maxViolations: 1,
+    desc: 'MW≤500, LogP≤5, HBD≤5, HBA≤10 (max 1 violation)',
+  },
+  veber: {
+    label: 'Veber',
+    color: 'yellow',
+    rules: [
+      { key: 'RotBonds', op: '<=', val: 10 },
+      { key: 'TPSA', op: '<=', val: 140 },
+    ],
+    maxViolations: 0,
+    desc: 'RotBonds≤10, TPSA≤140Å² (oral bioavailability)',
+  },
+  ghose: {
+    label: 'Ghose',
+    color: 'cyan',
+    rules: [
+      { key: 'LogP', op: '>=', val: -0.4 },
+      { key: 'LogP', op: '<=', val: 5.6 },
+      { key: 'MW', op: '>=', val: 160 },
+      { key: 'MW', op: '<=', val: 480 },
+      { key: 'MR', op: '>=', val: 40 },
+      { key: 'MR', op: '<=', val: 130 },
+      { key: 'NumAtoms', op: '>=', val: 20 },
+      { key: 'NumAtoms', op: '<=', val: 70 },
+    ],
+    maxViolations: 0,
+    desc: '-0.4<LogP<5.6, 160<MW<480, 40<MR<130, 20<atoms<70',
+  },
+  leadlike: {
+    label: 'Lead-like',
+    color: 'pink',
+    rules: [
+      { key: 'MW', op: '<=', val: 350 },
+      { key: 'LogP', op: '<=', val: 3.5 },
+      { key: 'RotBonds', op: '<=', val: 7 },
+    ],
+    maxViolations: 0,
+    desc: 'MW≤350, LogP≤3.5, RotBonds≤7 (hit-to-lead optimization space)',
+  },
+};
+
+function checkFilter(filterName, mol) {
+  const filter = DRUG_FILTERS[filterName];
+  if (!filter) return { pass: false, violations: 0 };
+  let violations = 0;
+  for (const rule of filter.rules) {
+    const val = mol.props[rule.key];
+    if (rule.op === '<=' && val > rule.val) violations++;
+    else if (rule.op === '>=' && val < rule.val) violations++;
+    else if (rule.op === '<' && val >= rule.val) violations++;
+    else if (rule.op === '>' && val <= rule.val) violations++;
+  }
+  return { pass: violations <= filter.maxViolations, violations };
+}
+
+// ---- Examples ----
+const EXAMPLES = {
+  druglike: `CC(=O)Oc1ccccc1C(=O)O aspirin
+CC(C)Cc1ccc(cc1)C(C)C(=O)O ibuprofen
+CC(=O)Nc1ccc(O)cc1 acetaminophen
+CN1C=NC2=C1C(=O)N(C(=O)N2C)C caffeine
+OC(=O)C1CCCN1 proline
+c1ccc2c(c1)cc1ccc3cccc4ccc2c1c34 pyrene
+CC12CCC3C(C1CCC2O)CCC1=CC(=O)CCC13C testosterone
+OC(=O)c1cc(O)c(O)c(O)c1 gallic_acid`,
+
+  lipinski: `C1CCCCC1 cyclohexane_MW84
+CCCCCCCCCCCCCCCCCCCC icosane_MW283
+c1ccc(-c2ccc(-c3ccc(-c4ccccc4)cc3)cc2)cc1 quaterphenyl_MW306
+OC(=O)CCCCCCCCCCCCCCC palmitic_acid_MW256
+NCCCCCCCCCCCCCCCCCCN diaminooctadecane
+CC(C)(C)c1ccc(cc1)C(O)(c1ccc(cc1)C(C)(C)C)c1ccc(cc1)C(C)(C)C MW_violator
+O=C(O)c1ccccc1O salicylic_acid_MW138
+c1ccccc1 benzene_MW78`,
+
+  diverse: `C methane
+CCO ethanol
+c1ccccc1 benzene
+CC(=O)Oc1ccccc1C(=O)O aspirin
+CN1C(=O)N(C)c2[nH]cnc2C1=O caffeine_modified
+CC1=C(C(CCC1)(C)C)/C=C/C(=C/C=C/C(=C/C=C/C=C(/C=C/C=C(/C=C/C1=C(CCCC1(C)C)C)\\C)\\C)/C)\\C beta_carotene
+OC[C@H]1OC(O)[C@H](O)[C@@H](O)[C@@H]1O glucose
+CC(C)CC1=CC=C(C=C1)C(C)C(=O)O ibuprofen`,
+
+  kinase: `CC1=C(C=C(C=C1)NC(=O)C2=CC=C(C=C2)CN3CCN(CC3)C)NC4=NC=CC(=N4)C5=CN=CC=C5 imatinib
+CC1=C(C=C(C=C1)NC(=O)C2=CC(=CC=C2)C(F)(F)F)NC3=NC=CC(=N3)C4=CN=CC=C4 nilotinib
+C#CC1=CC=CC(=C1)NC2=NC=NC3=C2C=C(C=C3)OCCCCCCN4CCN(CC4)C dasatinib_like
+CC(C)C1=CC=CC(=C1)NC(=O)C2=CC=C(C=C2)CNC(=O)OC bosutinib_like
+CC1=CC=C(C=C1)C(=O)NC2=CC(=CC=C2)NC(=O)C3=CC=CN=C3 sorafenib_like
+c1ccc(cc1)-c1ccc2c(c1)ccc1c3cc(-c4ccncc4)ccc3[nH]c21 ponatinib_core`,
+};
+
+// ---- Init RDKit ----
+async function initRDKit() {
+  try {
+    RDKitModule = await initRDKitModule();
+    const btn = document.getElementById('analyzeBtn');
+    btn.disabled = false;
+    btn.innerHTML = '⚡ Analyze Molecules';
+    setStatus('rdkit loaded — paste SMILES and click analyze', 'success');
+  } catch(e) {
+    const btn = document.getElementById('analyzeBtn');
+    btn.innerHTML = 'Analyze Molecules';
+    btn.disabled = true;
+    setStatus('failed to load rdkit: ' + e.message, 'error');
+  }
+}
+
+function setStatus(msg, type) {
+  const el = document.getElementById('status');
+  el.textContent = msg;
+  el.className = 'status' + (type ? ' ' + type : '');
+}
+
+function showLoading(text, sub) {
+  const overlay = document.getElementById('loadingOverlay');
+  document.getElementById('loadingText').textContent = text || 'Computing molecular properties...';
+  document.getElementById('loadingSubtext').textContent = sub || 'RDKit WASM is crunching descriptors';
+  overlay.classList.add('active');
+}
+
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('active');
+}
+
+// ---- PubChem Name Lookup ----
+async function lookupSMILES(name) {
+  const url = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(name)}/property/CanonicalSMILES/JSON`;
+  const resp = await fetch(url);
+  if (!resp.ok) return null;
+  const data = await resp.json();
+  const props = data?.PropertyTable?.Properties;
+  return props?.[0]?.CanonicalSMILES || props?.[0]?.ConnectivitySMILES || null;
+}
+
+function looksLikeName(line) {
+  const s = line.trim().split(/\s+/)[0];
+  // SMILES typically contain parentheses, =, digits after letters (rings), #, [, /, or \
+  return !/[()=\[\]#/\\@+]/.test(s) && !/[A-Za-z]\d/.test(s) && !/^\d/.test(s);
+}
+
+// ---- Analysis ----
+async function analyze() {
+  const input = document.getElementById('smilesInput').value.trim();
+  if (!input) { setStatus('enter SMILES first', 'error'); return; }
+
+  const lines = input.split('\n').filter(l => l.trim());
+
+  // Check for molecule names that need PubChem lookup
+  let resolvedInput = input;
+  const nameLookups = [];
+  for (let i = 0; i < lines.length; i++) {
+    const parts = lines[i].trim().split(/\s+/);
+    if (looksLikeName(lines[i])) {
+      nameLookups.push({ index: i, name: parts[0], rest: parts.slice(1).join(' ') });
+    }
+  }
+
+  if (nameLookups.length > 0) {
+    setStatus(`Looking up ${nameLookups.length} molecule name${nameLookups.length > 1 ? 's' : ''} on PubChem...`, '');
+    const resolvedLines = [...lines];
+    let resolved = 0, failed = 0;
+    for (const lookup of nameLookups) {
+      setStatus(`Looking up "${lookup.name}" on PubChem... (${resolved + failed + 1}/${nameLookups.length})`, '');
+      try {
+        const smiles = await lookupSMILES(lookup.name);
+        if (smiles) {
+          const label = lookup.rest || lookup.name;
+          resolvedLines[lookup.index] = `${smiles} ${label}`;
+          resolved++;
+        } else {
+          failed++;
+        }
+      } catch(e) {
+        failed++;
+      }
+    }
+    if (resolved > 0) {
+      resolvedInput = resolvedLines.join('\n');
+      // Update the textarea so the user can see resolved SMILES
+      document.getElementById('smilesInput').value = resolvedInput;
+      const msg = `Resolved ${resolved} name${resolved > 1 ? 's' : ''} via PubChem`;
+      setStatus(failed > 0 ? `${msg} (${failed} not found)` : msg, resolved > 0 ? 'success' : 'error');
+    } else if (failed > 0) {
+      setStatus(`Could not resolve ${failed} molecule name${failed > 1 ? 's' : ''} on PubChem`, 'error');
+    }
+  }
+
+  showLoading('Computing molecular properties...', `Processing ${resolvedInput.split('\n').filter(l=>l.trim()).length} molecules with RDKit WASM`);
+
+  // Use setTimeout to let the loading animation render
+  setTimeout(() => {
+    try {
+      doAnalysis(resolvedInput);
+    } catch(e) {
+      setStatus('analysis error: ' + e.message, 'error');
+    } finally {
+      hideLoading();
+    }
+  }, 50);
+}
+
+function doAnalysis(input) {
+  molecules = [];
+  compareIndices = [];
+  const lines = input.split('\n').filter(l => l.trim());
+
+  let errors = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const parts = lines[i].trim().split(/\s+/);
+    const smiles = parts[0];
+    const name = parts.slice(1).join(' ') || `mol_${i+1}`;
+
+    try {
+      const mol = RDKitModule.get_mol(smiles);
+      if (!mol || !mol.is_valid()) { errors++; continue; }
+
+      const desc = JSON.parse(mol.get_descriptors());
+      const svg = mol.get_svg_with_highlights(JSON.stringify({
+        width: 200, height: 150,
+      }));
+
+      const numAtoms = (desc.NumHeavyAtoms || desc.HeavyAtomCount || 0) + (desc.NumHs || 0);
+
+      // Compute Morgan fingerprint (radius 2, 2048 bits)
+      let fingerprint = '';
+      try {
+        fingerprint = mol.get_morgan_fp(JSON.stringify({radius: 2, nBits: 2048}));
+      } catch(e) { /* some molecules may fail */ }
+
+      molecules.push({
+        name, smiles,
+        svg,
+        fingerprint,
+        props: {
+          MW: desc.exactmw || desc.amw || 0,
+          LogP: desc.CrippenClogP || 0,
+          HBD: desc.NumHBD || 0,
+          HBA: desc.NumHBA || 0,
+          TPSA: desc.tpsa || 0,
+          RotBonds: desc.NumRotatableBonds || 0,
+          FrCSP3: desc.FractionCSP3 || 0,
+          Rings: desc.RingCount || 0,
+          AromaticRings: desc.NumAromaticRings || 0,
+          HeavyAtoms: desc.NumHeavyAtoms || desc.HeavyAtomCount || 0,
+          MR: desc.CrippenMR || 0,
+          NumAtoms: numAtoms || (desc.NumHeavyAtoms || 0),
+        },
+        filters: {},
+        paretoRank: null,
+        dominates: [],
+        dominatedBy: [],
+      });
+
+      mol.delete();
+    } catch(e) {
+      errors++;
+    }
+  }
+
+  // Apply all filters
+  molecules.forEach(m => {
+    for (const [name, _] of Object.entries(DRUG_FILTERS)) {
+      m.filters[name] = checkFilter(name, m);
+    }
+    // Legacy lipinski compat
+    m.lipinski = m.filters.lipinski;
+  });
+
+  // Pareto ranking
+  computeParetoRanks();
+  computeDominance();
+
+  if (molecules.length === 0) {
+    setStatus(`no valid molecules parsed (${errors} errors)`, 'error');
+    return;
+  }
+
+  setStatus(`${molecules.length} molecules analyzed` + (errors ? `, ${errors} failed` : ''), 'success');
+  document.getElementById('exportBtn').style.display = '';
+  document.getElementById('exportFigBtn').style.display = '';
+  document.getElementById('citeBtn').style.display = '';
+  showCopilotFab();
+
+  // Update molecule count badge
+  const badge = document.getElementById('molCountBadge');
+  badge.textContent = `${molecules.length} molecule${molecules.length !== 1 ? 's' : ''}`;
+  badge.classList.add('visible');
+
+  renderAll();
+}
+
+function computeParetoRanks() {
+  const keys = ['MW', 'LogP', 'HBD', 'HBA', 'TPSA', 'RotBonds'];
+  const n = molecules.length;
+  const dominated = new Array(n).fill(false);
+
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      if (i === j) continue;
+      let allLeq = true, anyLt = false;
+      for (const k of keys) {
+        if (molecules[j].props[k] > molecules[i].props[k]) allLeq = false;
+        if (molecules[j].props[k] < molecules[i].props[k]) anyLt = true;
+      }
+      if (allLeq && anyLt) { dominated[i] = true; break; }
+    }
+  }
+
+  molecules.forEach((m, i) => {
+    m.paretoRank = dominated[i] ? 2 : 1;
+  });
+}
+
+function computeDominance() {
+  const keys = ['MW', 'LogP', 'HBD', 'HBA', 'TPSA', 'RotBonds'];
+  const n = molecules.length;
+
+  for (let i = 0; i < n; i++) {
+    molecules[i].dominates = [];
+    molecules[i].dominatedBy = [];
+  }
+
+  for (let i = 0; i < n; i++) {
+    for (let j = i+1; j < n; j++) {
+      let iBetter = 0, jBetter = 0;
+      for (const k of keys) {
+        if (molecules[i].props[k] < molecules[j].props[k]) iBetter++;
+        else if (molecules[i].props[k] > molecules[j].props[k]) jBetter++;
+      }
+      if (iBetter > 0 && jBetter === 0) {
+        molecules[i].dominates.push(j);
+        molecules[j].dominatedBy.push(i);
+      } else if (jBetter > 0 && iBetter === 0) {
+        molecules[j].dominates.push(i);
+        molecules[i].dominatedBy.push(j);
+      }
+    }
+  }
+}
+
+// ---- Rendering ----
+function pickSmartView() {
+  const n = molecules.length;
+  if (n === 0) return 'pareto';
+  if (n === 2) return 'compare';
+  if (n <= 4) return 'scoring';
+  if (n <= 12) return 'pareto';
+  return 'parallel'; // large sets: parallel coords are most useful
+}
+
+function renderAll() {
+  if (molecules.length > 0) {
+    hideHero();
+    showShareBtn();
+    // Smart default: pick the best starting view for this set
+    currentView = pickSmartView();
+    showAllScatters = false; // reset on new analysis
+    collapseSidebar();
+  }
+  renderMolList();
+  renderContent();
+}
+
+function renderMolList() {
+  const container = document.getElementById('molList');
+  container.innerHTML = '';
+
+  // Show compare hint when molecules exist
+  document.getElementById('compareModeHint').style.display = molecules.length >= 2 ? '' : 'none';
+
+  molecules.forEach((m, i) => {
+    const isCompare = compareIndices.includes(i);
+    const card = document.createElement('div');
+    card.className = 'mol-card'
+      + (m.paretoRank === 1 ? ' pareto' : '')
+      + (i === selectedMolIdx ? ' selected' : '')
+      + (isCompare ? ' compare-selected' : '');
+    card.tabIndex = 0;
+    card.setAttribute('aria-label', `${m.name}${m.paretoRank === 1 ? ', Pareto optimal' : ''}`);
+    card.onclick = () => { selectedMolIdx = (selectedMolIdx === i) ? null : i; renderAll(); };
+    card.oncontextmenu = (e) => { e.preventDefault(); toggleCompare(i); };
+
+    const compareNum = isCompare ? (compareIndices.indexOf(i) + 1) : '';
+
+    // Build filter badges
+    let filterBadges = '';
+    for (const [fname, fdef] of Object.entries(DRUG_FILTERS)) {
+      if (activeFilters.has(fname)) {
+        const result = m.filters[fname];
+        if (result) {
+          filterBadges += `<span class="mol-badge ${result.pass ? 'pass' : 'fail'}">${fdef.label} ${result.pass ? '✓' : '✗'}</span>`;
+        }
+      }
+    }
+
+    const verdict = getVerdict(m);
+    const whyPareto = getWhyPareto(m, i);
+
+    card.innerHTML = `
+      <div class="mol-compare-check">${compareNum}</div>
+      <div class="mol-svg">${m.svg}</div>
+      <div class="mol-info">
+        <div class="mol-name">${m.name}</div>
+        <div class="mol-verdict ${verdict.cls}">${verdict.text}</div>
+        ${whyPareto ? `<div class="why-pareto" title="Why pareto-optimal?">${whyPareto}</div>` : ''}
+      </div>
+      <div class="mol-badges">
+        ${m.paretoRank === 1 ? '<span class="mol-badge pareto-badge">pareto</span>' : ''}
+        ${filterBadges}
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function toggleCompare(idx) {
+  const pos = compareIndices.indexOf(idx);
+  if (pos >= 0) {
+    compareIndices.splice(pos, 1);
+  } else {
+    if (compareIndices.length >= 2) compareIndices.shift();
+    compareIndices.push(idx);
+  }
+  // Auto-switch to compare view if 2 selected
+  if (compareIndices.length === 2) {
+    currentView = 'compare';
+  }
+  renderAll();
+}
+
+function clearCompare() {
+  compareIndices = [];
+  currentView = 'pareto';
+  renderAll();
+}
+
+function renderContent() {
+  // Destroy existing Chart.js instances to prevent memory leaks
+  chartInstances.forEach(c => { try { c.destroy(); } catch(e) {} });
+  chartInstances = [];
+
+  const content = document.getElementById('content');
+  const paretoCount = molecules.filter(m => m.paretoRank === 1).length;
+
+  // Compare bar
+  let compareBar = '';
+  if (compareIndices.length > 0) {
+    const names = compareIndices.map(i => molecules[i].name).join(' vs ');
+    compareBar = `<div class="compare-bar">
+      <div class="compare-info">
+        <span>🔬 Compare:</span>
+        <span class="compare-names">${names}</span>
+        <span style="color:var(--text2)">${compareIndices.length < 2 ? '(right-click one more molecule)' : ''}</span>
+      </div>
+      <button onclick="clearCompare()">✕ Clear</button>
+    </div>`;
+  }
+
+  const ro5Fail = molecules.filter(m => !m.filters.lipinski.pass).length;
+  const summaryParts = [
+    `<span class="sl-num">${molecules.length}</span> molecules`,
+    `<span class="sl-sep">·</span>`,
+    `<span class="sl-num sl-pareto">${paretoCount}</span> pareto-optimal`,
+  ];
+  if (ro5Fail > 0) {
+    summaryParts.push(`<span class="sl-sep">·</span>`);
+    summaryParts.push(`<span class="sl-num sl-fail">${ro5Fail}</span> Ro5 fail`);
+  } else {
+    summaryParts.push(`<span class="sl-sep">·</span> all Ro5 pass`);
+  }
+
+  content.innerHTML = `
+    ${compareBar}
+    <div class="summary-line">
+      ${summaryParts.join(' ')}
+      <span style="flex:1"></span>
+      <button class="btn-copy-summary" onclick="copySummary()">Copy summary</button>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="Analysis views">
+      <button class="tab ${currentView==='pareto'?'active':''}" role="tab" aria-selected="${currentView==='pareto'}" onclick="switchView('pareto')">Pareto</button>
+      <button class="tab ${currentView==='scoring'?'active':''}" role="tab" aria-selected="${currentView==='scoring'}" onclick="switchView('scoring')">Scoring</button>
+      <button class="tab ${currentView==='parallel'?'active':''}" role="tab" aria-selected="${currentView==='parallel'}" onclick="switchView('parallel')">Parallel</button>
+      <button class="tab ${currentView==='similarity'?'active':''}" role="tab" aria-selected="${currentView==='similarity'}" onclick="switchView('similarity')">Similarity</button>
+      <button class="tab ${currentView==='egg'?'active':''}" role="tab" aria-selected="${currentView==='egg'}" onclick="switchView('egg')">BOILED-Egg</button>
+      <button class="tab tab-secondary ${currentView==='radar'?'active':''}" role="tab" aria-selected="${currentView==='radar'}" onclick="switchView('radar')">Radar</button>
+      <button class="tab tab-secondary ${currentView==='table'?'active':''}" role="tab" aria-selected="${currentView==='table'}" onclick="switchView('table')">Properties</button>
+      <button class="tab tab-secondary ${currentView==='dominance'?'active':''}" role="tab" aria-selected="${currentView==='dominance'}" onclick="switchView('dominance')">Dominance</button>
+      <button class="tab tab-secondary ${currentView==='compare'?'active':''}" role="tab" aria-selected="${currentView==='compare'}" onclick="switchView('compare')">Compare${compareIndices.length===2?' (2)':''}</button>
+    </div>
+
+    <div id="viewContainer" role="tabpanel" aria-label="${currentView} view"></div>
+  `;
+
+  const container = document.getElementById('viewContainer');
+  if (currentView === 'pareto') renderParetoView(container);
+  else if (currentView === 'egg') renderEggView(container);
+  else if (currentView === 'radar') renderRadarView(container);
+  else if (currentView === 'parallel') renderParallelView(container);
+  else if (currentView === 'table') renderTableView(container);
+  else if (currentView === 'dominance') renderDominanceView(container);
+  else if (currentView === 'similarity') renderSimilarityView(container);
+  else if (currentView === 'scoring') renderScoringView(container);
+  else if (currentView === 'compare') renderCompareView(container);
+}
+
+function switchView(v) { currentView = v; renderContent(); }
+
+// ---- v2: Track scatter chart axis state ----
+const scatterAxes = [
+  { x: 'MW', y: 'LogP' },
+  { x: 'MW', y: 'TPSA' },
+  { x: 'LogP', y: 'TPSA' },
+  { x: 'HBD', y: 'HBA' },
+  { x: 'MW', y: 'RotBonds' },
+  { x: 'LogP', y: 'FrCSP3' },
+];
+
+function changeAxis(chartIdx, axis, value) {
+  scatterAxes[chartIdx][axis] = value;
+  renderContent();
+}
+
+function toggleFilter(name) {
+  if (activeFilters.has(name)) activeFilters.delete(name);
+  else activeFilters.add(name);
+  renderContent();
+}
+
+// ---- Filter threshold annotations for scatter plots ----
+function getFilterAnnotations(xKey, yKey) {
+  const annotations = {};
+  let idx = 0;
+
+  for (const [fname, fdef] of Object.entries(DRUG_FILTERS)) {
+    if (!activeFilters.has(fname)) continue;
+
+    const colorMap = { green: '#71717a', yellow: '#eab308', cyan: '#06b6d4', pink: '#ec4899', orange: '#f97316' };
+    const color = colorMap[fdef.color] || '#8888a0';
+
+    for (const rule of fdef.rules) {
+      if (rule.key === xKey) {
+        annotations[`f_${fname}_x_${idx}`] = {
+          type: 'line',
+          scaleID: 'x',
+          value: rule.val,
+          borderColor: color + '99',
+          borderWidth: 1.5,
+          borderDash: [6, 3],
+          label: {
+            display: true,
+            content: `${fdef.label}: ${xKey}${rule.op}${rule.val}`,
+            position: 'start',
+            backgroundColor: color + '22',
+            color: color,
+            font: { size: 9 },
+            padding: 2,
+          },
+        };
+        idx++;
+      }
+      if (rule.key === yKey) {
+        annotations[`f_${fname}_y_${idx}`] = {
+          type: 'line',
+          scaleID: 'y',
+          value: rule.val,
+          borderColor: color + '99',
+          borderWidth: 1.5,
+          borderDash: [6, 3],
+          label: {
+            display: true,
+            content: `${fdef.label}: ${yKey}${rule.op}${rule.val}`,
+            position: 'start',
+            backgroundColor: color + '22',
+            color: color,
+            font: { size: 9 },
+            padding: 2,
+          },
+        };
+        idx++;
+      }
+    }
+  }
+  return annotations;
+}
+
+// ---- Hover tooltip helpers ----
+function findMolByLabel(label) {
+  return molecules.findIndex(m => m.name === label);
+}
+
+function showMolTooltip(molIdx, x, y, xKey, yKey) {
+  const tooltip = document.getElementById('molHoverTooltip');
+  const m = molecules[molIdx];
+  if (!m) { hideMolTooltip(); return; }
+  document.getElementById('tooltipSvg').innerHTML = m.svg;
+  document.getElementById('tooltipName').textContent = m.name;
+  document.getElementById('tooltipProps').innerHTML =
+    `${xKey}: ${m.props[xKey].toFixed(1)}  |  ${yKey}: ${m.props[yKey].toFixed(1)}` +
+    `<div class="tooltip-pareto" style="background:${m.paretoRank===1?'rgba(34,197,94,0.15);color:#22c55e':'rgba(239,68,68,0.15);color:#ef4444'}">${m.paretoRank===1?'pareto-optimal':'dominated'}</div>`;
+  // Position: offset from cursor, keep on screen
+  let left = x + 16, top = y - 20;
+  const tw = 260, th = 220;
+  if (left + tw > window.innerWidth) left = x - tw - 16;
+  if (top + th > window.innerHeight) top = window.innerHeight - th - 8;
+  if (top < 8) top = 8;
+  tooltip.style.left = left + 'px';
+  tooltip.style.top = top + 'px';
+  tooltip.classList.add('visible');
+}
+
+function hideMolTooltip() {
+  document.getElementById('molHoverTooltip').classList.remove('visible');
+}
+
+function buildScatterChart(canvas, xKey, yKey, chartIdx) {
+  const datasets = [];
+
+  // Build data with molecule index for tooltip lookup
+  const passData = []; const failData = [];
+  molecules.forEach((m, i) => {
+    const pt = { x: m.props[xKey], y: m.props[yKey], label: m.name, molIdx: i, pareto: m.paretoRank === 1 };
+    if (m.filters.lipinski.pass) passData.push(pt); else failData.push(pt);
+  });
+
+  datasets.push({
+    label: 'Ro5 Pass', data: passData,
+    backgroundColor: 'rgba(34,197,94,0.7)', borderColor: '#22c55e',
+    pointRadius: 6, pointHoverRadius: 8, pointStyle: 'circle',
+  });
+  datasets.push({
+    label: 'Ro5 Fail', data: failData,
+    backgroundColor: 'rgba(239,68,68,0.7)', borderColor: '#ef4444',
+    pointRadius: 6, pointHoverRadius: 8, pointStyle: 'triangle',
+  });
+
+  const paretoMols = molecules.filter(m => m.paretoRank === 1)
+    .map(m => ({ x: m.props[xKey], y: m.props[yKey], label: m.name }))
+    .sort((a, b) => a.x - b.x);
+
+  if (paretoMols.length >= 2) {
+    datasets.push({
+      label: 'Pareto Front',
+      data: paretoMols,
+      type: 'line',
+      borderColor: 'rgba(255,255,255,0.25)',
+      borderWidth: 1.5,
+      borderDash: [6, 3],
+      pointRadius: 0,
+      fill: false,
+      tension: 0,
+      order: -1,
+    });
+  }
+
+  if (selectedMolIdx !== null) {
+    datasets.push({
+      label: 'Selected', data: [{
+        x: molecules[selectedMolIdx].props[xKey],
+        y: molecules[selectedMolIdx].props[yKey],
+        label: molecules[selectedMolIdx].name,
+      }],
+      backgroundColor: '#2dd4bf', borderColor: '#fff',
+      borderWidth: 2, pointRadius: 10, pointHoverRadius: 12,
+    });
+  }
+
+  const annotations = getFilterAnnotations(xKey, yKey);
+
+  const chartInstance = new Chart(canvas, {
+    type: 'scatter',
+    data: { datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false },
+        annotation: { annotations },
+      },
+      scales: {
+        x: {
+          title: { display: true, text: xKey, color: '#8888a0' },
+          grid: { color: 'rgba(42,42,58,0.5)' },
+          ticks: { color: '#8888a0' },
+        },
+        y: {
+          title: { display: true, text: yKey, color: '#8888a0' },
+          grid: { color: 'rgba(42,42,58,0.5)' },
+          ticks: { color: '#8888a0' },
+        },
+      },
+      onHover: (event) => {
+        const points = chartInstance.getElementsAtEventForMode(event, 'nearest', { intersect: true }, false);
+        if (points.length > 0) {
+          const pt = points[0];
+          const dsIdx = pt.datasetIndex;
+          const dIdx = pt.index;
+          const raw = chartInstance.data.datasets[dsIdx].data[dIdx];
+          if (raw && raw.molIdx !== undefined) {
+            const rect = canvas.getBoundingClientRect();
+            showMolTooltip(raw.molIdx, event.native.clientX, event.native.clientY, xKey, yKey);
+          }
+        } else {
+          hideMolTooltip();
+        }
+      },
+    }
+  });
+  chartInstances.push(chartInstance);
+
+  // Hide tooltip when mouse leaves canvas
+  canvas.addEventListener('mouseleave', hideMolTooltip);
+}
+
+function renderParetoView(container) {
+  const propOptions = PROPERTIES.map(p => `<option value="${p.key}">${p.label} (${p.key})</option>`).join('');
+
+  // Filter toggles
+  let filterToggles = '<div class="filter-toggles">';
+  filterToggles += '<span style="font-size:11px;color:var(--text2);padding:4px 0">Overlays:</span>';
+  for (const [fname, fdef] of Object.entries(DRUG_FILTERS)) {
+    const isActive = activeFilters.has(fname);
+    filterToggles += `<button class="filter-toggle ${isActive ? 'active-' + fdef.color : ''}" onclick="toggleFilter('${fname}')" title="${fdef.desc}">${fdef.label}</button>`;
+  }
+  filterToggles += '</div>';
+
+  let html = `
+    ${filterToggles}
+    <div class="legend-inline" style="margin-bottom:12px">
+      <div class="legend-item"><span class="legend-dot" style="background:#22c55e"></span> Ro5 Pass</div>
+      <div class="legend-item"><span class="legend-dot" style="background:#ef4444;border-radius:0;clip-path:polygon(50% 0%,100% 100%,0% 100%)"></span> Ro5 Fail</div>
+      <div class="legend-item"><span class="legend-line" style="background:rgba(255,255,255,0.25);border-top:2px dashed #14b8a6;background:none"></span> Pareto Front</div>
+    </div>
+    <div class="row" style="flex-wrap:wrap">`;
+
+  const visibleAxes = showAllScatters ? scatterAxes : scatterAxes.slice(0, 2);
+  visibleAxes.forEach((axes, idx) => {
+    const realIdx = showAllScatters ? idx : idx; // index into scatterAxes
+    const xSel = propOptions.replace(`value="${axes.x}"`, `value="${axes.x}" selected`);
+    const ySel = propOptions.replace(`value="${axes.y}"`, `value="${axes.y}" selected`);
+
+    html += `<div class="panel" style="flex:1;min-width:300px">
+      <div class="panel-header">
+        <div class="panel-title" style="font-size:13px">${axes.x} vs ${axes.y}</div>
+        <div class="axis-selectors">
+          <label>X: <select onchange="changeAxis(${realIdx},'x',this.value)">${xSel}</select></label>
+          <label>Y: <select onchange="changeAxis(${realIdx},'y',this.value)">${ySel}</select></label>
+        </div>
+      </div>
+      <div class="chart-container"><canvas id="scatter_${realIdx}" aria-label="${axes.x} vs ${axes.y} scatter plot" role="img"></canvas></div>
+    </div>`;
+  });
+
+  if (!showAllScatters) {
+    html += `</div><button class="scatter-expand-btn" onclick="toggleScatters()">Show all 6 plots</button>`;
+  } else {
+    html += `</div><button class="scatter-expand-btn" onclick="toggleScatters()">Show fewer</button>`;
+  }
+  container.innerHTML = html;
+
+  visibleAxes.forEach((axes, idx) => {
+    const realIdx = showAllScatters ? idx : idx;
+    const canvas = document.getElementById(`scatter_${realIdx}`);
+    buildScatterChart(canvas, axes.x, axes.y, realIdx);
+  });
+}
+
+// ---- BOILED-Egg View ----
+function renderEggView(container) {
+  container.innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">BOILED-Egg Plot</div>
+          <div class="panel-subtitle">Brain Or Intestinal EstimateD permeation — Daina & Zoete, ChemMedChem 2016</div>
+        </div>
+      </div>
+      <div class="legend-inline" style="margin-bottom:16px">
+        <div class="legend-item"><span class="legend-dot" style="background:rgba(255,255,255,0.8);border:1px solid #aaa"></span> Egg White (HIA — GI absorbed)</div>
+        <div class="legend-item"><span class="legend-dot" style="background:rgba(255,220,80,0.8);border:1px solid #cca000"></span> Yolk (BBB — brain penetrant)</div>
+        <div class="legend-item"><span class="legend-dot" style="background:rgba(200,200,200,0.3)"></span> Outside (low absorption)</div>
+      </div>
+      <div class="egg-container">
+        <canvas id="eggCanvas" style="width:100%;height:100%"></canvas>
+      </div>
+      <div style="margin-top:12px;font-size:11px;color:var(--text2);line-height:1.6">
+        <strong>How to read:</strong> The BOILED-Egg model uses WLOGP (Wildman-Crippen LogP) and TPSA to predict passive gastrointestinal absorption (white region) and blood-brain barrier penetration (yellow yolk). Molecules in the white are predicted to be absorbed by the GI tract. Molecules in the yolk are predicted to also cross the BBB. Points outside both regions are predicted to have poor oral absorption.
+      </div>
+    </div>
+  `;
+
+  drawBoiledEgg();
+}
+
+function drawBoiledEgg() {
+  const canvas = document.getElementById('eggCanvas');
+  if (!canvas) return;
+
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = rect.width;
+  const H = rect.height;
+
+  // Plot bounds: WLOGP on x-axis (-3 to 8), TPSA on y-axis (0 to 200)
+  const xMin = -3, xMax = 8;
+  const yMin = 0, yMax = 200;
+  const padLeft = 60, padRight = 30, padTop = 20, padBottom = 50;
+  const plotW = W - padLeft - padRight;
+  const plotH = H - padTop - padBottom;
+
+  function toPixel(logp, tpsa) {
+    const px = padLeft + ((logp - xMin) / (xMax - xMin)) * plotW;
+    const py = padTop + ((yMax - tpsa) / (yMax - yMin)) * plotH; // inverted Y
+    return [px, py];
+  }
+
+  // Background
+  ctx.fillStyle = '#12121a';
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid
+  ctx.strokeStyle = 'rgba(42,42,58,0.5)';
+  ctx.lineWidth = 0.5;
+  for (let x = -2; x <= 7; x++) {
+    const [px] = toPixel(x, 0);
+    ctx.beginPath(); ctx.moveTo(px, padTop); ctx.lineTo(px, H - padBottom); ctx.stroke();
+  }
+  for (let y = 0; y <= 200; y += 20) {
+    const [, py] = toPixel(0, y);
+    ctx.beginPath(); ctx.moveTo(padLeft, py); ctx.lineTo(W - padRight, py); ctx.stroke();
+  }
+
+  // Draw the egg white (HIA region) — elliptical approximation
+  // SwissADME egg white: roughly centered around WLOGP ~2.5, TPSA ~70
+  // Approximate as an ellipse: WLOGP in (-1.5, 6.5), TPSA in (0, 155)
+  const eggWhiteCx = 2.5, eggWhiteCy = 72;
+  const eggWhiteRx = 4.2, eggWhiteRy = 78;
+
+  // Draw egg white
+  ctx.save();
+  ctx.beginPath();
+  const [ewcx, ewcy] = toPixel(eggWhiteCx, eggWhiteCy);
+  const ewrx = (eggWhiteRx / (xMax - xMin)) * plotW;
+  const ewry = (eggWhiteRy / (yMax - yMin)) * plotH;
+  ctx.ellipse(ewcx, ewcy, ewrx, ewry, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(240, 240, 235, 0.12)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(200, 200, 195, 0.4)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+
+  // Draw yolk (BBB region) — smaller ellipse inside
+  // Approximate: WLOGP in (0, 4.5), TPSA in (0, 80)
+  const yolkCx = 2.2, yolkCy = 38;
+  const yolkRx = 2.5, yolkRy = 40;
+
+  ctx.save();
+  ctx.beginPath();
+  const [ycx, ycy] = toPixel(yolkCx, yolkCy);
+  const yrx = (yolkRx / (xMax - xMin)) * plotW;
+  const yry = (yolkRy / (yMax - yMin)) * plotH;
+  ctx.ellipse(ycx, ycy, yrx, yry, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255, 220, 80, 0.15)';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255, 200, 50, 0.5)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+
+  // Labels for regions
+  ctx.font = '13px Inter, sans-serif';
+  ctx.fillStyle = 'rgba(200,200,195,0.5)';
+  ctx.textAlign = 'center';
+  const [wlx, wly] = toPixel(eggWhiteCx, 140);
+  ctx.fillText('GI Absorbed (White)', wlx, wly);
+
+  ctx.fillStyle = 'rgba(255,200,50,0.6)';
+  const [ylx, yly] = toPixel(yolkCx, yolkCy);
+  ctx.fillText('BBB Penetrant (Yolk)', ylx, yly - 10);
+
+  // Check if a point is inside an ellipse
+  function insideEllipse(logp, tpsa, cx, cy, rx, ry) {
+    return ((logp - cx) ** 2) / (rx ** 2) + ((tpsa - cy) ** 2) / (ry ** 2) <= 1;
+  }
+
+  // Plot molecules — store positions for hover
+  const eggMolPositions = [];
+  molecules.forEach((m, i) => {
+    const logp = m.props.LogP;
+    const tpsa = m.props.TPSA;
+    const [px, py] = toPixel(logp, tpsa);
+    eggMolPositions.push({ idx: i, px, py });
+
+    // Determine zone
+    const inYolk = insideEllipse(logp, tpsa, yolkCx, yolkCy, yolkRx, yolkRy);
+    const inWhite = insideEllipse(logp, tpsa, eggWhiteCx, eggWhiteCy, eggWhiteRx, eggWhiteRy);
+
+    let fillColor, strokeColor;
+    if (inYolk) {
+      fillColor = 'rgba(255, 200, 50, 0.9)';
+      strokeColor = '#cca000';
+    } else if (inWhite) {
+      fillColor = 'rgba(240, 240, 235, 0.9)';
+      strokeColor = '#999';
+    } else {
+      fillColor = 'rgba(200, 200, 200, 0.4)';
+      strokeColor = '#555';
+    }
+
+    // Selected highlight
+    if (i === selectedMolIdx) {
+      ctx.beginPath();
+      ctx.arc(px, py, 12, 0, Math.PI * 2);
+      ctx.strokeStyle = '#2dd4bf';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    ctx.beginPath();
+    ctx.arc(px, py, 6, 0, Math.PI * 2);
+    ctx.fillStyle = fillColor;
+    ctx.fill();
+    ctx.strokeStyle = strokeColor;
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Label
+    ctx.font = '10px Inter, sans-serif';
+    ctx.fillStyle = '#c0c0cc';
+    ctx.textAlign = 'center';
+    ctx.fillText(m.name.length > 12 ? m.name.slice(0, 10) + '…' : m.name, px, py - 10);
+  });
+
+  // Hover tooltip on BOILED-Egg
+  canvas.onmousemove = (e) => {
+    const cr = canvas.getBoundingClientRect();
+    const mx = e.clientX - cr.left;
+    const my = e.clientY - cr.top;
+    let bestDist = 20, bestIdx = -1;
+    eggMolPositions.forEach(({ idx, px, py }) => {
+      const d = Math.sqrt((mx - px) ** 2 + (my - py) ** 2);
+      if (d < bestDist) { bestDist = d; bestIdx = idx; }
+    });
+    if (bestIdx >= 0) {
+      showMolTooltip(bestIdx, e.clientX, e.clientY, 'LogP', 'TPSA');
+      canvas.style.cursor = 'pointer';
+    } else {
+      hideMolTooltip();
+      canvas.style.cursor = 'default';
+    }
+  };
+  canvas.onmouseleave = () => hideMolTooltip();
+
+  // Axes
+  ctx.strokeStyle = '#4a4a5a';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(padLeft, padTop); ctx.lineTo(padLeft, H - padBottom);
+  ctx.lineTo(W - padRight, H - padBottom);
+  ctx.stroke();
+
+  // X-axis labels
+  ctx.font = '11px Inter, sans-serif';
+  ctx.fillStyle = '#8888a0';
+  ctx.textAlign = 'center';
+  for (let x = -2; x <= 7; x += 2) {
+    const [px] = toPixel(x, 0);
+    ctx.fillText(x.toString(), px, H - padBottom + 20);
+  }
+  ctx.fillText('WLOGP (Wildman-Crippen LogP)', padLeft + plotW / 2, H - 8);
+
+  // Y-axis labels
+  ctx.textAlign = 'right';
+  for (let y = 0; y <= 200; y += 40) {
+    const [, py] = toPixel(0, y);
+    ctx.fillText(y.toString(), padLeft - 10, py + 4);
+  }
+  ctx.save();
+  ctx.translate(14, padTop + plotH / 2);
+  ctx.rotate(-Math.PI / 2);
+  ctx.textAlign = 'center';
+  ctx.fillText('TPSA (Å²)', 0, 0);
+  ctx.restore();
+}
+
+// ---- Compare View ----
+function renderCompareView(container) {
+  if (compareIndices.length < 2) {
+    container.innerHTML = `
+      <div class="panel" style="text-align:center;padding:60px 20px">
+        <div style="font-size:40px;margin-bottom:16px">🔬</div>
+        <h3 style="font-size:18px;margin-bottom:8px">Select 2 molecules to compare</h3>
+        <p style="color:var(--text2);font-size:13px;max-width:400px;margin:0 auto">
+          Right-click on two molecule cards in the sidebar to select them for side-by-side comparison. 
+          You'll see a property bar chart and detailed breakdown of which molecule wins on each metric.
+        </p>
+      </div>
+    `;
+    return;
+  }
+
+  const m1 = molecules[compareIndices[0]];
+  const m2 = molecules[compareIndices[1]];
+
+  // Properties to compare with ideal directions
+  const compareProps = [
+    { key: 'MW', label: 'Molecular Weight', unit: 'Da', ideal: 'lower', idealRange: [0, 500] },
+    { key: 'LogP', label: 'cLogP', unit: '', ideal: 'range', idealRange: [0, 5] },
+    { key: 'HBD', label: 'H-Bond Donors', unit: '', ideal: 'lower', idealRange: [0, 5] },
+    { key: 'HBA', label: 'H-Bond Acceptors', unit: '', ideal: 'lower', idealRange: [0, 10] },
+    { key: 'TPSA', label: 'TPSA', unit: 'Å²', ideal: 'range', idealRange: [20, 140] },
+    { key: 'RotBonds', label: 'Rotatable Bonds', unit: '', ideal: 'lower', idealRange: [0, 10] },
+    { key: 'FrCSP3', label: 'Fraction Csp3', unit: '', ideal: 'higher', idealRange: [0, 1] },
+    { key: 'HeavyAtoms', label: 'Heavy Atoms', unit: '', ideal: 'lower', idealRange: [0, 50] },
+    { key: 'MR', label: 'Molar Refractivity', unit: '', ideal: 'range', idealRange: [40, 130] },
+  ];
+
+  // Determine winners for each property
+  function getWinner(prop, v1, v2) {
+    if (prop.ideal === 'lower') return v1 < v2 ? 1 : v1 > v2 ? 2 : 0;
+    if (prop.ideal === 'higher') return v1 > v2 ? 1 : v1 < v2 ? 2 : 0;
+    if (prop.ideal === 'range') {
+      const [lo, hi] = prop.idealRange;
+      const d1 = (v1 >= lo && v1 <= hi) ? 0 : Math.min(Math.abs(v1 - lo), Math.abs(v1 - hi));
+      const d2 = (v2 >= lo && v2 <= hi) ? 0 : Math.min(Math.abs(v2 - lo), Math.abs(v2 - hi));
+      return d1 < d2 ? 1 : d1 > d2 ? 2 : 0;
+    }
+    return 0;
+  }
+
+  let m1Wins = 0, m2Wins = 0, ties = 0;
+  compareProps.forEach(p => {
+    const w = getWinner(p, m1.props[p.key], m2.props[p.key]);
+    if (w === 1) m1Wins++;
+    else if (w === 2) m2Wins++;
+    else ties++;
+  });
+
+  // Build property rows
+  let propRows = '';
+  compareProps.forEach(p => {
+    const v1 = m1.props[p.key];
+    const v2 = m2.props[p.key];
+    const maxVal = Math.max(Math.abs(v1), Math.abs(v2), p.idealRange[1]) || 1;
+    const pct1 = Math.min(Math.abs(v1) / maxVal * 100, 100);
+    const pct2 = Math.min(Math.abs(v2) / maxVal * 100, 100);
+    const winner = getWinner(p, v1, v2);
+    const fmt = p.key === 'FrCSP3' ? 3 : 1;
+
+    propRows += `
+      <div class="compare-prop-row">
+        <div style="text-align:right;font-family:'Geist Mono',monospace;font-size:12px;${winner===1?'color:var(--green);font-weight:600':'color:var(--text)'}">${v1.toFixed(fmt)}</div>
+        <div class="compare-bar-visual"><div class="compare-bar-fill left" style="width:${pct1}%;background:${winner===1?'var(--green)':'var(--accent)'}80"></div></div>
+        <div class="compare-prop-name" style="text-align:center;grid-column:span 2">${p.label}</div>
+        <div class="compare-bar-visual"><div class="compare-bar-fill" style="width:${pct2}%;background:${winner===2?'var(--green)':'var(--cyan)'}80"></div></div>
+        <div style="text-align:left;font-family:'Geist Mono',monospace;font-size:12px;${winner===2?'color:var(--green);font-weight:600':'color:var(--text)'}">${v2.toFixed(fmt)}</div>
+      </div>
+    `;
+  });
+
+  // Filter comparison
+  let filterComparison = '';
+  for (const [fname, fdef] of Object.entries(DRUG_FILTERS)) {
+    const r1 = m1.filters[fname];
+    const r2 = m2.filters[fname];
+    filterComparison += `
+      <div style="display:flex;justify-content:space-between;padding:4px 0;font-size:12px;border-bottom:1px solid rgba(42,42,58,0.3)">
+        <span style="color:${r1.pass?'var(--green)':'var(--red)'}">${r1.pass?'✓ Pass':'✗ Fail ('+r1.violations+')'}</span>
+        <span style="color:var(--text2)">${fdef.label}</span>
+        <span style="color:${r2.pass?'var(--green)':'var(--red)'}">${r2.pass?'✓ Pass':'✗ Fail ('+r2.violations+')'}</span>
+      </div>
+    `;
+  }
+
+  container.innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Molecule Comparison</div>
+        <div class="panel-subtitle">${m1.name} vs ${m2.name}</div>
+      </div>
+
+      <!-- Score summary -->
+      <div style="display:flex;justify-content:center;gap:32px;margin-bottom:24px;padding:16px;background:var(--surface2);border-radius:8px">
+        <div style="text-align:center">
+          <div style="font-size:28px;font-weight:700;color:var(--accent2)">${m1Wins}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px">${m1.name} wins</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:28px;font-weight:700;color:var(--text2)">${ties}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px">ties</div>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:28px;font-weight:700;color:var(--cyan)">${m2Wins}</div>
+          <div style="font-size:11px;color:var(--text2);margin-top:2px">${m2.name} wins</div>
+        </div>
+      </div>
+
+      <!-- Structures side by side -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+        <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px;border:2px solid var(--accent)30">
+          <div style="display:flex;justify-content:center">${m1.svg}</div>
+          <div style="font-weight:600;margin-top:8px">${m1.name}</div>
+          <div style="font-size:10px;color:var(--text2);font-family:monospace;margin-top:2px">${m1.smiles.length > 40 ? m1.smiles.slice(0,37)+'…' : m1.smiles}</div>
+        </div>
+        <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:8px;border:2px solid var(--cyan)30">
+          <div style="display:flex;justify-content:center">${m2.svg}</div>
+          <div style="font-weight:600;margin-top:8px">${m2.name}</div>
+          <div style="font-size:10px;color:var(--text2);font-family:monospace;margin-top:2px">${m2.smiles.length > 40 ? m2.smiles.slice(0,37)+'…' : m2.smiles}</div>
+        </div>
+      </div>
+
+      <!-- Property comparison bars -->
+      <div style="margin-bottom:20px">
+        <div style="display:grid;grid-template-columns:80px 1fr 120px 1fr 80px;gap:4px;margin-bottom:8px;font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:0.5px">
+          <div style="text-align:right">${m1.name.slice(0,8)}</div>
+          <div></div>
+          <div style="text-align:center">Property</div>
+          <div></div>
+          <div>${m2.name.slice(0,8)}</div>
+        </div>
+        ${propRows}
+      </div>
+
+      <!-- Bar chart comparison -->
+      <div style="height:300px;margin-bottom:20px">
+        <canvas id="compareBarChart"></canvas>
+      </div>
+
+      <!-- Filter comparison -->
+      <div style="margin-top:16px">
+        <div style="font-size:13px;font-weight:600;margin-bottom:8px">Drug-likeness Filters</div>
+        ${filterComparison}
+      </div>
+    </div>
+  `;
+
+  // Build comparison bar chart
+  buildCompareBarChart(m1, m2, compareProps);
+}
+
+function buildCompareBarChart(m1, m2, props) {
+  const canvas = document.getElementById('compareBarChart');
+  if (!canvas) return;
+
+  const labels = props.map(p => p.label);
+  // Normalize values to max for each property for comparison
+  const maxVals = props.map(p => {
+    const max = Math.max(Math.abs(m1.props[p.key]), Math.abs(m2.props[p.key]));
+    return max || 1;
+  });
+
+  const compareChart = new Chart(canvas, {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: m1.name,
+          data: props.map((p, i) => m1.props[p.key]),
+          backgroundColor: 'rgba(20, 184, 166, 0.7)',
+          borderColor: '#14b8a6',
+          borderWidth: 1,
+        },
+        {
+          label: m2.name,
+          data: props.map((p, i) => m2.props[p.key]),
+          backgroundColor: 'rgba(6, 182, 212, 0.7)',
+          borderColor: '#06b6d4',
+          borderWidth: 1,
+        },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: { color: '#8888a0', font: { size: 11 } }
+        },
+      },
+      scales: {
+        x: {
+          ticks: { color: '#8888a0', font: { size: 10 }, maxRotation: 45 },
+          grid: { color: 'rgba(42,42,58,0.3)' },
+        },
+        y: {
+          ticks: { color: '#8888a0' },
+          grid: { color: 'rgba(42,42,58,0.3)' },
+        },
+      },
+    },
+  });
+  chartInstances.push(compareChart);
+}
+
+function renderRadarView(container) {
+  const labels = ['MW', 'LogP', 'HBD', 'HBA', 'TPSA', 'RotBonds', 'FrCSP3'];
+  const maxVals = {};
+  labels.forEach(k => {
+    const prop = PROPERTIES.find(p => p.key === k);
+    if (prop && prop.lipinski) maxVals[k] = prop.lipinski.max * 1.5;
+    else maxVals[k] = Math.max(...molecules.map(m => m.props[k]), 1);
+  });
+
+  const datasets = molecules.map((m, i) => ({
+    label: m.name,
+    data: labels.map(k => Math.min(m.props[k] / maxVals[k], 1.5)),
+    borderColor: COLORS[i % COLORS.length],
+    backgroundColor: COLORS[i % COLORS.length] + '20',
+    borderWidth: selectedMolIdx === i ? 3 : 1.5,
+    pointRadius: selectedMolIdx === i ? 4 : 2,
+  }));
+
+  container.innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">property radar</div>
+        <div class="panel-subtitle">normalized to lipinski limits (1.0 = threshold)</div>
+      </div>
+      <div class="radar-container"><canvas id="radarChart"></canvas></div>
+    </div>
+  `;
+
+  const radarCanvas = document.getElementById('radarChart');
+  const radarInstance = new Chart(radarCanvas, {
+    type: 'radar',
+    data: { labels, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { labels: { color: '#8888a0', font: { size: 11 } } },
+        tooltip: { enabled: false },
+      },
+      scales: {
+        r: {
+          grid: { color: 'rgba(42,42,58,0.5)' },
+          angleLines: { color: 'rgba(42,42,58,0.5)' },
+          pointLabels: { color: '#e0e0e8', font: { size: 12 } },
+          ticks: { color: '#8888a0', backdropColor: 'transparent' },
+          suggestedMin: 0, suggestedMax: 1.2,
+        }
+      },
+      onHover: (event) => {
+        const points = radarInstance.getElementsAtEventForMode(event, 'nearest', { intersect: false }, false);
+        if (points.length > 0) {
+          const pt = points[0];
+          const molIdx = pt.datasetIndex; // each dataset = one molecule
+          if (molIdx < molecules.length) {
+            showMolTooltip(molIdx, event.native.clientX, event.native.clientY, 'MW', 'LogP');
+          }
+        } else {
+          hideMolTooltip();
+        }
+      },
+    }
+  });
+  chartInstances.push(radarInstance);
+  radarCanvas.addEventListener('mouseleave', hideMolTooltip);
+}
+
+function renderTableView(container) {
+  // Filter toggles for table too
+  let filterToggles = '<div class="filter-toggles" style="margin-bottom:16px">';
+  filterToggles += '<span style="font-size:11px;color:var(--text2);padding:4px 0">Show filters:</span>';
+  for (const [fname, fdef] of Object.entries(DRUG_FILTERS)) {
+    const isActive = activeFilters.has(fname);
+    filterToggles += `<button class="filter-toggle ${isActive ? 'active-' + fdef.color : ''}" onclick="toggleFilter('${fname}')" title="${fdef.desc}">${fdef.label}</button>`;
+  }
+  filterToggles += '</div>';
+
+  // Build filter columns header and cells
+  const activeFilterNames = [...activeFilters];
+
+  let html = `${filterToggles}<div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">molecular properties</div>
+      <div class="panel-subtitle">click column headers to sort</div>
+    </div>
+    <div style="overflow-x:auto">
+    <table class="prop-table">
+      <tr>
+        <th>Molecule</th>
+        ${PROPERTIES.slice(0, 10).map(p => `<th style="cursor:pointer" onclick="sortTable('${p.key}')">${p.label}</th>`).join('')}
+        ${activeFilterNames.map(fn => `<th>${DRUG_FILTERS[fn].label}</th>`).join('')}
+        <th>Pareto</th>
+      </tr>`;
+
+  molecules.forEach((m, i) => {
+    html += `<tr style="${i===selectedMolIdx ? 'background:rgba(20,184,166,0.08)' : ''}">
+      <td><strong>${m.name}</strong></td>`;
+    PROPERTIES.slice(0, 10).forEach(p => {
+      const v = m.props[p.key];
+      let cls = '';
+      if (p.lipinski) {
+        cls = v <= p.lipinski.max ? 'prop-good' : 'prop-bad';
+      }
+      html += `<td class="prop-val ${cls}">${typeof v === 'number' ? v.toFixed(p.key === 'FrCSP3' ? 3 : 1) : v}</td>`;
+    });
+    activeFilterNames.forEach(fn => {
+      const r = m.filters[fn];
+      html += `<td>${r.pass ? '<span class="prop-good">pass</span>' : '<span class="prop-bad">' + r.violations + ' fail</span>'}</td>`;
+    });
+    html += `<td>${m.paretoRank === 1 ? '<span class="prop-good">yes</span>' : '<span class="prop-bad">no</span>'}</td>`;
+    html += `</tr>`;
+  });
+
+  html += '</table></div></div>';
+  container.innerHTML = html;
+}
+
+function renderDominanceView(container) {
+  const n = molecules.length;
+  if (n > 15) {
+    container.innerHTML = '<div class="panel"><p>dominance matrix limited to 15 molecules for readability</p></div>';
+    return;
+  }
+
+  const cols = n + 1;
+  let html = `<div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">dominance matrix</div>
+      <div class="panel-subtitle">row dominates column? (on MW, LogP, HBD, HBA, TPSA, RotBonds)</div>
+    </div>
+    <div class="dom-grid" style="grid-template-columns: repeat(${cols}, 1fr)">
+      <div class="dom-cell dom-header"></div>`;
+
+  molecules.forEach(m => {
+    html += `<div class="dom-cell dom-header" title="${m.smiles}">${m.name.slice(0,8)}</div>`;
+  });
+
+  for (let i = 0; i < n; i++) {
+    html += `<div class="dom-cell dom-header">${molecules[i].name.slice(0,8)}</div>`;
+    for (let j = 0; j < n; j++) {
+      if (i === j) {
+        html += `<div class="dom-cell dom-self">-</div>`;
+      } else if (molecules[i].dominates.includes(j)) {
+        html += `<div class="dom-cell dom-dominates">DOM</div>`;
+      } else if (molecules[i].dominatedBy.includes(j)) {
+        html += `<div class="dom-cell dom-dominated">dom'd</div>`;
+      } else {
+        html += `<div class="dom-cell dom-neutral">~</div>`;
+      }
+    }
+  }
+
+  html += '</div></div>';
+
+  html += '<div class="panel"><div class="panel-title" style="margin-bottom:12px">dominance summary</div>';
+  molecules.forEach((m, i) => {
+    const domCount = m.dominates.length;
+    const byCount = m.dominatedBy.length;
+    const status = m.paretoRank === 1 ? 'pareto-optimal' : 'dominated';
+    html += `<div style="margin-bottom:6px;font-size:13px">
+      <strong>${m.name}</strong>: dominates ${domCount}, dominated by ${byCount}
+      <span style="color:${m.paretoRank===1?'var(--green)':'var(--red)'};margin-left:8px">${status}</span>
+    </div>`;
+  });
+  html += '</div>';
+
+  container.innerHTML = html;
+}
+
+// ---- Tanimoto Similarity ----
+function tanimotoSimilarity(fp1, fp2) {
+  if (!fp1 || !fp2 || fp1.length !== fp2.length) return 0;
+  let intersection = 0, union = 0;
+  for (let i = 0; i < fp1.length; i++) {
+    const a = fp1[i] === '1', b = fp2[i] === '1';
+    if (a && b) intersection++;
+    if (a || b) union++;
+  }
+  return union === 0 ? 0 : intersection / union;
+}
+
+function computeSimilarityMatrix() {
+  const n = molecules.length;
+  const matrix = Array.from({ length: n }, () => new Float64Array(n));
+  for (let i = 0; i < n; i++) {
+    matrix[i][i] = 1.0;
+    for (let j = i + 1; j < n; j++) {
+      const sim = tanimotoSimilarity(molecules[i].fingerprint, molecules[j].fingerprint);
+      matrix[i][j] = sim;
+      matrix[j][i] = sim;
+    }
+  }
+  return matrix;
+}
+
+function computeActivityCliffs(matrix) {
+  const n = molecules.length;
+  const lipinskiMax = { MW: 500, LogP: 5, HBD: 5, HBA: 10, TPSA: 140, RotBonds: 10 };
+  const keys = Object.keys(lipinskiMax);
+  const cliffs = [];
+
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      const sim = matrix[i][j];
+      if (sim <= 0.5) continue;
+      // Euclidean distance across normalized properties
+      let sumSq = 0;
+      const diffs = {};
+      keys.forEach(k => {
+        const norm_i = molecules[i].props[k] / lipinskiMax[k];
+        const norm_j = molecules[j].props[k] / lipinskiMax[k];
+        const d = Math.abs(norm_i - norm_j);
+        sumSq += d * d;
+        diffs[k] = d;
+      });
+      const propDist = Math.sqrt(sumSq);
+      const cliffScore = sim * propDist;
+      // Find top differing properties
+      const sortedDiffs = Object.entries(diffs).sort((a, b) => b[1] - a[1]);
+      cliffs.push({ i, j, sim, propDist, cliffScore, topDiffs: sortedDiffs.slice(0, 3) });
+    }
+  }
+  return cliffs.sort((a, b) => b.cliffScore - a.cliffScore).slice(0, 5);
+}
+
+function simColor(val) {
+  // 0=dark blue → 0.3=cyan → 0.5=green → 0.7=yellow → 1.0=red
+  if (val <= 0.3) {
+    const t = val / 0.3;
+    return `rgb(${Math.round(0 + t * 0)}, ${Math.round(40 + t * 140)}, ${Math.round(120 + t * 100)})`;
+  } else if (val <= 0.5) {
+    const t = (val - 0.3) / 0.2;
+    return `rgb(${Math.round(0 + t * 34)}, ${Math.round(180 + t * 17)}, ${Math.round(220 - t * 126)})`;
+  } else if (val <= 0.7) {
+    const t = (val - 0.5) / 0.2;
+    return `rgb(${Math.round(34 + t * 200)}, ${Math.round(197 + t * 36)}, ${Math.round(94 - t * 86)})`;
+  } else {
+    const t = (val - 0.7) / 0.3;
+    return `rgb(${Math.round(234 + t * 5)}, ${Math.round(233 - t * 164)}, ${Math.round(8 - t * 8)})`;
+  }
+}
+
+function renderSimilarityView(container) {
+  const n = molecules.length;
+  if (n < 2) {
+    container.innerHTML = '<div class="panel" style="text-align:center;padding:40px"><p style="color:var(--text2)">Need at least 2 molecules for similarity analysis</p></div>';
+    return;
+  }
+
+  const matrix = computeSimilarityMatrix();
+
+  // Diversity score: average (1 - sim) across all pairs
+  let totalDist = 0, pairCount = 0;
+  const topPairs = [];
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      totalDist += (1 - matrix[i][j]);
+      pairCount++;
+      topPairs.push({ i, j, sim: matrix[i][j] });
+    }
+  }
+  const diversity = pairCount > 0 ? totalDist / pairCount : 0;
+  topPairs.sort((a, b) => b.sim - a.sim);
+  const top5 = topPairs.slice(0, 5);
+
+  // Activity cliffs
+  const cliffs = computeActivityCliffs(matrix);
+
+  // Diversity card
+  let html = `<div class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">Tanimoto Similarity</div>
+        <div class="panel-subtitle">Morgan fingerprints (radius 2, 2048 bits) — pairwise structural similarity</div>
+      </div>
+    </div>
+    <div class="sim-diversity-card">
+      <div>
+        <div class="sim-diversity-score" style="color:${diversity > 0.6 ? 'var(--green)' : diversity > 0.3 ? 'var(--yellow)' : 'var(--red)'}">${diversity.toFixed(3)}</div>
+        <div style="font-size:11px;color:var(--text2)">Chemical Diversity</div>
+      </div>
+      <div style="font-size:12px;color:var(--text2);line-height:1.6">
+        Average pairwise Tanimoto distance (1 − similarity) across all ${pairCount} pairs.<br>
+        ${diversity > 0.7 ? 'Highly diverse set — good chemical space coverage.' : diversity > 0.4 ? 'Moderate diversity — some structural clusters.' : 'Low diversity — molecules are structurally similar.'}
+      </div>
+    </div>`;
+
+  // Heatmap (Canvas)
+  html += `<div class="sim-heatmap-container" style="margin-bottom:20px">
+      <canvas id="simHeatmap" style="width:100%;max-width:${Math.max(n * 60, 300)}px;height:${Math.max(n * 50 + 60, 200)}px"></canvas>
+    </div>`;
+
+  // Most similar pairs
+  html += `<div style="margin-top:16px"><div style="font-size:13px;font-weight:600;margin-bottom:8px">Most Similar Pairs</div>`;
+  top5.forEach(p => {
+    const m1 = molecules[p.i], m2 = molecules[p.j];
+    html += `<div class="sim-pair">
+      <div class="pair-svgs">${m1.svg}</div>
+      <div class="pair-info">
+        <div class="pair-names">${m1.name} ↔ ${m2.name}</div>
+        <div class="pair-detail">Tanimoto: ${p.sim.toFixed(3)}</div>
+      </div>
+      <div class="pair-svgs">${m2.svg}</div>
+      <div class="pair-score" style="color:${p.sim > 0.7 ? 'var(--red)' : p.sim > 0.4 ? 'var(--yellow)' : 'var(--green)'}">${p.sim.toFixed(3)}</div>
+    </div>`;
+  });
+  html += '</div></div>';
+
+  // Activity Cliffs
+  html += `<div class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="panel-title">Activity Cliffs</div>
+        <div class="panel-subtitle">structurally similar (Tanimoto > 0.5) but with large property differences — key SAR insights</div>
+      </div>
+    </div>`;
+
+  if (cliffs.length === 0) {
+    html += '<div style="text-align:center;padding:24px;color:var(--text2);font-size:13px">No activity cliffs detected (no pairs with Tanimoto > 0.5 and significant property differences)</div>';
+  } else {
+    const maxCliff = cliffs[0].cliffScore;
+    cliffs.forEach((c, ci) => {
+      const m1 = molecules[c.i], m2 = molecules[c.j];
+      const pct = maxCliff > 0 ? (c.cliffScore / maxCliff * 100) : 0;
+      const diffText = c.topDiffs.map(([k, d]) => `${k}: ${d.toFixed(2)}`).join(', ');
+      html += `<div class="cliff-item">
+        <div class="cliff-svgs">${m1.svg}<span style="color:var(--text2);font-size:16px;padding:0 2px">↔</span>${m2.svg}</div>
+        <div class="cliff-info">
+          <div class="cliff-names">${m1.name} vs ${m2.name}</div>
+          <div class="cliff-detail">Tanimoto: ${c.sim.toFixed(3)} | Property distance: ${c.propDist.toFixed(3)}</div>
+          <div class="cliff-detail">Biggest differences: ${diffText}</div>
+          <div class="cliff-bar"><div class="cliff-bar-fill" style="width:${Math.max(pct, 3)}%"></div></div>
+        </div>
+        <div class="cliff-score">${c.cliffScore.toFixed(3)}</div>
+      </div>`;
+    });
+  }
+  html += '</div>';
+
+  container.innerHTML = html;
+
+  // Draw heatmap
+  drawSimHeatmap(matrix);
+}
+
+function drawSimHeatmap(matrix) {
+  const canvas = document.getElementById('simHeatmap');
+  if (!canvas) return;
+
+  const n = molecules.length;
+  const cellSize = Math.min(50, Math.max(30, 400 / n));
+  const labelW = 80;
+  const W = labelW + n * cellSize + 10;
+  const H = 40 + n * cellSize + 10;
+
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  // Background
+  ctx.fillStyle = '#12121a';
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw cells
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      const val = matrix[i][j];
+      const x = labelW + j * cellSize;
+      const y = 40 + i * cellSize;
+
+      ctx.fillStyle = i === j ? '#2a2a3a' : simColor(val);
+      ctx.fillRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
+
+      // Show value in cell if small matrix
+      if (n <= 10) {
+        ctx.font = `${Math.min(11, cellSize * 0.3)}px JetBrains Mono, monospace`;
+        ctx.fillStyle = val > 0.6 ? '#000' : '#ccc';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(i === j ? '1.0' : val.toFixed(2), x + cellSize / 2, y + cellSize / 2);
+      }
+    }
+  }
+
+  // Row labels (left)
+  ctx.font = '10px Inter, sans-serif';
+  ctx.fillStyle = '#8888a0';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i < n; i++) {
+    const name = molecules[i].name.length > 10 ? molecules[i].name.slice(0, 8) + '…' : molecules[i].name;
+    ctx.fillText(name, labelW - 6, 40 + i * cellSize + cellSize / 2);
+  }
+
+  // Column labels (top, rotated)
+  ctx.textAlign = 'left';
+  for (let j = 0; j < n; j++) {
+    const name = molecules[j].name.length > 10 ? molecules[j].name.slice(0, 8) + '…' : molecules[j].name;
+    ctx.save();
+    ctx.translate(labelW + j * cellSize + cellSize / 2, 36);
+    ctx.rotate(-Math.PI / 4);
+    ctx.fillText(name, 0, 0);
+    ctx.restore();
+  }
+
+  // Color scale legend
+  const legendX = labelW, legendY = 40 + n * cellSize + 6;
+  const legendW = n * cellSize;
+  for (let px = 0; px < legendW; px++) {
+    ctx.fillStyle = simColor(px / legendW);
+    ctx.fillRect(legendX + px, legendY, 1, 6);
+  }
+  ctx.font = '9px Inter, sans-serif';
+  ctx.fillStyle = '#8888a0';
+  ctx.textAlign = 'left';
+  ctx.fillText('0.0', legendX, legendY + 14);
+  ctx.textAlign = 'center';
+  ctx.fillText('0.5', legendX + legendW / 2, legendY + 14);
+  ctx.textAlign = 'right';
+  ctx.fillText('1.0', legendX + legendW, legendY + 14);
+}
+
+// ---- Parallel Coordinates View ----
+function renderParallelView(container) {
+  container.innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Parallel Coordinates</div>
+          <div class="panel-subtitle">drag on axes to brush-filter molecules · click axis to clear</div>
+        </div>
+      </div>
+      <div class="parallel-legend">
+        <div class="legend-item"><span class="legend-dot" style="background:#22c55e"></span> Pareto-optimal</div>
+        <div class="legend-item"><span class="legend-dot" style="background:#ef4444"></span> Dominated</div>
+        <div class="legend-item"><span class="legend-line" style="border-top:2px dashed #eab308;background:none;width:16px;height:0"></span> Lipinski limit</div>
+      </div>
+      <div class="parallel-container">
+        <canvas id="parallelCanvas" style="width:100%;height:100%"></canvas>
+      </div>
+    </div>
+  `;
+  drawParallelCoords();
+}
+
+function drawParallelCoords() {
+  const canvas = document.getElementById('parallelCanvas');
+  if (!canvas) return;
+
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const W = rect.width;
+  const H = rect.height;
+
+  const axes = ['MW', 'LogP', 'HBD', 'HBA', 'TPSA', 'RotBonds'];
+  const padLeft = 50, padRight = 50, padTop = 40, padBottom = 40;
+  const plotW = W - padLeft - padRight;
+  const plotH = H - padTop - padBottom;
+  const axisSpacing = plotW / (axes.length - 1);
+
+  // Compute min/max for each axis
+  const ranges = {};
+  axes.forEach(k => {
+    const vals = molecules.map(m => m.props[k]);
+    const mn = Math.min(...vals);
+    const mx = Math.max(...vals);
+    const pad = (mx - mn) * 0.05 || 1;
+    ranges[k] = { min: mn - pad, max: mx + pad };
+  });
+
+  // Lipinski limits
+  const lipinskiLimits = { MW: 500, LogP: 5, HBD: 5, HBA: 10, TPSA: 140, RotBonds: 10 };
+
+  function axisX(i) { return padLeft + i * axisSpacing; }
+  function valToY(key, val) {
+    const r = ranges[key];
+    return padTop + plotH - ((val - r.min) / (r.max - r.min)) * plotH;
+  }
+  function yToVal(key, y) {
+    const r = ranges[key];
+    return r.min + ((padTop + plotH - y) / plotH) * (r.max - r.min);
+  }
+
+  // Check if molecule passes all active brushes
+  function passesBrushes(m) {
+    for (const [key, br] of Object.entries(pcBrushes)) {
+      const v = m.props[key];
+      if (v < br[0] || v > br[1]) return false;
+    }
+    return true;
+  }
+
+  // Background
+  ctx.fillStyle = '#12121a';
+  ctx.fillRect(0, 0, W, H);
+
+  // Draw axes
+  axes.forEach((k, i) => {
+    const x = axisX(i);
+    ctx.strokeStyle = '#3a3a4a';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(x, padTop);
+    ctx.lineTo(x, padTop + plotH);
+    ctx.stroke();
+
+    // Axis label
+    ctx.font = '12px Inter, sans-serif';
+    ctx.fillStyle = '#e0e0e8';
+    ctx.textAlign = 'center';
+    ctx.fillText(k, x, padTop - 14);
+
+    // Min/max labels
+    ctx.font = '10px JetBrains Mono, monospace';
+    ctx.fillStyle = '#8888a0';
+    ctx.fillText(ranges[k].max.toFixed(1), x, padTop - 2);
+    ctx.fillText(ranges[k].min.toFixed(1), x, padTop + plotH + 14);
+
+    // Lipinski threshold
+    if (lipinskiLimits[k] !== undefined) {
+      const ly = valToY(k, lipinskiLimits[k]);
+      if (ly >= padTop && ly <= padTop + plotH) {
+        ctx.strokeStyle = '#eab30866';
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 3]);
+        ctx.beginPath();
+        ctx.moveTo(x - 12, ly);
+        ctx.lineTo(x + 12, ly);
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+    }
+
+    // Brush indicator
+    if (pcBrushes[k]) {
+      const by1 = valToY(k, pcBrushes[k][1]);
+      const by2 = valToY(k, pcBrushes[k][0]);
+      ctx.fillStyle = 'rgba(20,184,166,0.15)';
+      ctx.fillRect(x - 10, by1, 20, by2 - by1);
+      ctx.strokeStyle = '#14b8a6';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x - 10, by1, 20, by2 - by1);
+    }
+  });
+
+  // Draw molecule lines (faded first, then highlighted)
+  const sorted = molecules.map((m, i) => ({ m, i, passes: passesBrushes(m) }));
+  // Draw non-passing first (faded)
+  sorted.filter(s => !s.passes).forEach(({ m, i }) => {
+    ctx.strokeStyle = 'rgba(100,100,120,0.1)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    axes.forEach((k, ai) => {
+      const x = axisX(ai);
+      const y = valToY(k, m.props[k]);
+      if (ai === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  });
+
+  // Draw passing molecules
+  sorted.filter(s => s.passes).forEach(({ m, i }) => {
+    const isSelected = i === selectedMolIdx;
+    const isPareto = m.paretoRank === 1;
+    ctx.strokeStyle = isSelected ? '#2dd4bf' : isPareto ? 'rgba(34,197,94,0.6)' : 'rgba(239,68,68,0.35)';
+    ctx.lineWidth = isSelected ? 3 : 1.5;
+    if (isSelected) {
+      ctx.shadowColor = '#2dd4bf';
+      ctx.shadowBlur = 8;
+    }
+    ctx.beginPath();
+    axes.forEach((k, ai) => {
+      const x = axisX(ai);
+      const y = valToY(k, m.props[k]);
+      if (ai === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+  });
+
+  // ---- Interaction: hover + brush ----
+  let isDragging = false, dragAxisIdx = -1, dragStartY = 0;
+
+  canvas.onmousemove = (e) => {
+    if (isDragging) return;
+    const cr = canvas.getBoundingClientRect();
+    const mx = e.clientX - cr.left;
+    const my = e.clientY - cr.top;
+    // Find nearest molecule line
+    let bestDist = 20, bestIdx = -1;
+    molecules.forEach((m, mi) => {
+      axes.forEach((k, ai) => {
+        const x = axisX(ai);
+        const y = valToY(k, m.props[k]);
+        const d = Math.sqrt((mx - x) ** 2 + (my - y) ** 2);
+        if (d < bestDist) { bestDist = d; bestIdx = mi; }
+      });
+    });
+    if (bestIdx >= 0) {
+      showMolTooltip(bestIdx, e.clientX, e.clientY, 'MW', 'LogP');
+      canvas.style.cursor = 'pointer';
+    } else {
+      hideMolTooltip();
+      canvas.style.cursor = 'crosshair';
+    }
+  };
+
+  canvas.onmouseleave = () => { hideMolTooltip(); isDragging = false; };
+
+  canvas.onmousedown = (e) => {
+    const cr = canvas.getBoundingClientRect();
+    const mx = e.clientX - cr.left;
+    const my = e.clientY - cr.top;
+    // Find which axis we're near
+    for (let ai = 0; ai < axes.length; ai++) {
+      if (Math.abs(mx - axisX(ai)) < 20) {
+        isDragging = true;
+        dragAxisIdx = ai;
+        dragStartY = my;
+        break;
+      }
+    }
+  };
+
+  canvas.onmouseup = (e) => {
+    if (!isDragging) return;
+    const cr = canvas.getBoundingClientRect();
+    const my = e.clientY - cr.top;
+    const key = axes[dragAxisIdx];
+    if (Math.abs(my - dragStartY) < 5) {
+      // Click without drag: clear brush on this axis
+      delete pcBrushes[key];
+    } else {
+      // Set brush
+      const v1 = yToVal(key, dragStartY);
+      const v2 = yToVal(key, my);
+      pcBrushes[key] = [Math.min(v1, v2), Math.max(v1, v2)];
+    }
+    isDragging = false;
+    dragAxisIdx = -1;
+    drawParallelCoords(); // Redraw
+  };
+}
+
+// ---- Scoring View ----
+function setProfile(name) {
+  currentProfile = name;
+  if (name !== 'custom') {
+    scoringWeights = { ...SCORING_PROFILES[name].weights };
+  }
+  renderContent();
+}
+
+function updateWeight(key, val) {
+  scoringWeights[key] = parseFloat(val);
+  currentProfile = 'custom';
+  renderContent();
+}
+
+function computeScores() {
+  const keys = ['MW', 'LogP', 'HBD', 'HBA', 'TPSA', 'RotBonds'];
+  // Compute utopia (best) and ranges
+  const utopia = {}, nadir = {};
+  keys.forEach(k => {
+    const vals = molecules.map(m => m.props[k]);
+    utopia[k] = Math.min(...vals); // lower is better for all scoring keys
+    nadir[k] = Math.max(...vals);
+  });
+
+  return molecules.map((m, i) => {
+    // Weighted Chebyshev: score = max_k(w_k * |f_k - f_k*| / range_k)
+    let maxTerm = 0;
+    let worstProp = '';
+    const terms = {};
+    keys.forEach(k => {
+      const range = nadir[k] - utopia[k] || 1;
+      const term = scoringWeights[k] * Math.abs(m.props[k] - utopia[k]) / range;
+      terms[k] = term;
+      if (term > maxTerm) { maxTerm = term; worstProp = k; }
+    });
+    return { idx: i, mol: m, score: maxTerm, terms, worstProp };
+  }).sort((a, b) => a.score - b.score);
+}
+
+function renderScoringView(container) {
+  const keys = ['MW', 'LogP', 'HBD', 'HBA', 'TPSA', 'RotBonds'];
+  const keyLabels = { MW: 'Mol Weight', LogP: 'cLogP', HBD: 'H-Bond Donors', HBA: 'H-Bond Acceptors', TPSA: 'TPSA', RotBonds: 'Rot. Bonds' };
+
+  // Profile buttons
+  let profileBtns = '<div class="scoring-profiles">';
+  for (const [pname, pdef] of Object.entries(SCORING_PROFILES)) {
+    profileBtns += `<button class="profile-btn ${currentProfile===pname?'active':''}" onclick="setProfile('${pname}')">${pdef.label}</button>`;
+  }
+  profileBtns += '</div>';
+
+  // Weight sliders
+  let sliders = '';
+  keys.forEach(k => {
+    sliders += `<div class="weight-slider-row">
+      <label>${keyLabels[k]}</label>
+      <input type="range" min="0" max="1" step="0.05" value="${scoringWeights[k]}" oninput="updateWeight('${k}', this.value)">
+      <span class="weight-val">${scoringWeights[k].toFixed(2)}</span>
+    </div>`;
+  });
+
+  // Compute scores
+  const ranked = computeScores();
+  const maxScore = ranked.length > 0 ? ranked[ranked.length - 1].score : 1;
+
+  // Rank list
+  let rankList = '';
+  ranked.forEach((r, ri) => {
+    const pct = maxScore > 0 ? (1 - r.score / maxScore) * 100 : 100;
+    const barColor = ri === 0 ? '#22c55e' : r.mol.paretoRank === 1 ? '#14b8a6' : '#ef4444';
+    // Find strengths (lowest terms) and weaknesses (highest terms)
+    const sortedTerms = Object.entries(r.terms).sort((a, b) => a[1] - b[1]);
+    const strength = sortedTerms[0][0];
+    const weakness = sortedTerms[sortedTerms.length - 1][0];
+
+    rankList += `<div class="scoring-rank-item ${r.mol.paretoRank===1?'is-pareto':''}">
+      <div class="scoring-rank-num">#${ri + 1}</div>
+      <div class="scoring-rank-info">
+        <div class="rank-name">${r.mol.name} ${r.mol.paretoRank===1?'<span style="color:var(--green);font-size:10px">● pareto</span>':''}</div>
+        <div class="rank-bar-wrap"><div class="rank-bar-fill" style="width:${Math.max(pct,3)}%;background:${barColor}"></div></div>
+        <div class="rank-detail">best: ${strength} · worst: ${weakness}</div>
+      </div>
+      <div class="scoring-rank-score" style="color:${ri===0?'var(--green)':'var(--text)'}">${r.score.toFixed(3)}</div>
+    </div>`;
+  });
+
+  container.innerHTML = `
+    <div class="panel">
+      <div class="panel-header">
+        <div>
+          <div class="panel-title">Scoring Profiles</div>
+          <div class="panel-subtitle">weighted Chebyshev scalarization — lower score = closer to ideal</div>
+        </div>
+      </div>
+      ${profileBtns}
+      <div style="padding:12px;background:var(--surface2);border-radius:8px;margin-bottom:16px">
+        ${sliders}
+      </div>
+      <div style="font-size:11px;color:var(--text2);margin-bottom:12px">
+        Score = max<sub>i</sub>(w<sub>i</sub> × |f<sub>i</sub> − f<sub>i</sub>*| / range<sub>i</sub>). Lower = more balanced across weighted objectives. The #1 molecule is the best compromise under your current weights.
+      </div>
+    </div>
+    <div class="panel">
+      <div class="panel-header">
+        <div class="panel-title">Ranked Molecules</div>
+        <div class="panel-subtitle">${ranked.length} molecules · profile: ${SCORING_PROFILES[currentProfile].label}</div>
+      </div>
+      <div class="scoring-rank-list">${rankList}</div>
+    </div>
+  `;
+}
+
+// ---- Sidebar toggle ----
+function toggleSidebarInput() {
+  sidebarCollapsed = !sidebarCollapsed;
+  const section = document.getElementById('sidebarInputSection');
+  const btn = document.getElementById('sidebarExpandBtn');
+  section.classList.toggle('collapsed', sidebarCollapsed);
+  btn.textContent = sidebarCollapsed ? 'Edit input' : 'Collapse';
+}
+
+function collapseSidebar() {
+  sidebarCollapsed = true;
+  const section = document.getElementById('sidebarInputSection');
+  const btn = document.getElementById('sidebarExpandBtn');
+  if (section) section.classList.add('collapsed');
+  if (btn) { btn.classList.add('visible'); btn.textContent = 'Edit input'; }
+}
+
+// ---- Molecule verdict ----
+function getVerdict(m) {
+  const issues = [];
+  const strengths = [];
+
+  // Check Lipinski
+  if (!m.filters.lipinski.pass) issues.push('Ro5 violation');
+
+  // Check individual properties
+  if (m.props.MW > 500) issues.push('heavy (MW ' + m.props.MW.toFixed(0) + ')');
+  else if (m.props.MW < 200) strengths.push('fragment-like');
+
+  if (m.props.LogP > 5) issues.push('too lipophilic');
+  else if (m.props.LogP < 0) strengths.push('hydrophilic');
+  else if (m.props.LogP >= 1 && m.props.LogP <= 3) strengths.push('good LogP');
+
+  if (m.props.TPSA < 60) strengths.push('BBB-permeable');
+  else if (m.props.TPSA > 140) issues.push('poor absorption');
+
+  if (m.props.RotBonds > 10) issues.push('too flexible');
+
+  // Pareto status
+  if (m.paretoRank === 1 && issues.length === 0) {
+    return { text: strengths.length > 0 ? strengths.join(', ') : 'well-balanced', cls: 'good' };
+  } else if (issues.length > 0) {
+    return { text: issues.join(', '), cls: issues.length >= 2 ? 'bad' : 'warn' };
+  } else if (m.paretoRank === 1) {
+    return { text: 'pareto-optimal, ' + (strengths[0] || 'balanced'), cls: 'good' };
+  } else {
+    return { text: strengths.length > 0 ? strengths.join(', ') : 'dominated', cls: 'warn' };
+  }
+}
+
+// ---- Why Pareto explanation ----
+function getWhyPareto(m, idx) {
+  if (m.paretoRank !== 1) return '';
+  const keys = ['MW', 'LogP', 'HBD', 'HBA', 'TPSA', 'RotBonds'];
+  const labels = { MW: 'MW', LogP: 'LogP', HBD: 'HBD', HBA: 'HBA', TPSA: 'TPSA', RotBonds: 'RotBonds' };
+
+  // Find properties where this molecule is best (minimum)
+  const bestAt = [];
+  keys.forEach(k => {
+    const myVal = m.props[k];
+    const isBest = molecules.every(other => other.props[k] >= myVal);
+    if (isBest) bestAt.push(labels[k] + ' ' + myVal.toFixed(1));
+  });
+
+  if (bestAt.length > 0) {
+    return 'lowest ' + bestAt.join(', ');
+  }
+
+  // If not best at any single property, explain non-dominance
+  const dominatedCount = molecules.filter(other =>
+    other !== m && keys.every(k => m.props[k] <= other.props[k]) && keys.some(k => m.props[k] < other.props[k])
+  ).length;
+
+  if (dominatedCount > 0) {
+    return 'dominates ' + dominatedCount + ' molecule' + (dominatedCount > 1 ? 's' : '');
+  }
+  return 'not dominated by any other';
+}
+
+// ---- Copy Summary ----
+function copySummary() {
+  const paretoMols = molecules.filter(m => m.paretoRank === 1);
+  const scored = computeScores();
+  const profileName = SCORING_PROFILES[currentProfile].label;
+
+  let report = `MolParetoLab Analysis Summary\n`;
+  report += `${'='.repeat(40)}\n\n`;
+  report += `${molecules.length} molecules · ${paretoMols.length} pareto-optimal`;
+  const fails = molecules.filter(m => !m.filters.lipinski.pass).length;
+  report += fails > 0 ? ` · ${fails} Ro5 failures\n\n` : ` · all Ro5 pass\n\n`;
+
+  report += `Pareto-Optimal Set:\n`;
+  paretoMols.forEach(m => {
+    const v = getVerdict(m);
+    report += `  ${m.name} — MW:${m.props.MW.toFixed(1)} LogP:${m.props.LogP.toFixed(2)} TPSA:${m.props.TPSA.toFixed(1)} (${v.text})\n`;
+  });
+
+  report += `\nScoring Ranking (${profileName}):\n`;
+  scored.slice(0, 5).forEach((r, i) => {
+    report += `  #${i+1} ${r.mol.name} — score ${r.score.toFixed(3)} (best: ${Object.entries(r.terms).sort((a,b)=>a[1]-b[1])[0][0]}, worst: ${r.worstProp})\n`;
+  });
+
+  report += `\nKey Trade-offs:\n`;
+  paretoMols.forEach(m => {
+    const why = getWhyPareto(m, molecules.indexOf(m));
+    if (why) report += `  ${m.name}: ${why}\n`;
+  });
+
+  report += `\nGenerated by MolParetoLab (https://ilkhamfy.github.io/molparetolab/)\n`;
+
+  navigator.clipboard.writeText(report).then(() => {
+    showToast('Summary copied to clipboard');
+  }).catch(() => {
+    showToast('Copy failed — check browser permissions');
+  });
+}
+
+// ---- Scatter expand toggle ----
+function toggleScatters() {
+  showAllScatters = !showAllScatters;
+  renderContent();
+}
+
+// ---- Keyboard navigation ----
+document.addEventListener('keydown', (e) => {
+  if (!molecules.length) return;
+  if (document.activeElement && document.activeElement.tagName === 'TEXTAREA') return;
+  if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+
+  if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+    e.preventDefault();
+    if (selectedMolIdx === null) selectedMolIdx = 0;
+    else selectedMolIdx = Math.min(selectedMolIdx + 1, molecules.length - 1);
+    renderAll();
+  } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+    e.preventDefault();
+    if (selectedMolIdx === null) selectedMolIdx = molecules.length - 1;
+    else selectedMolIdx = Math.max(selectedMolIdx - 1, 0);
+    renderAll();
+  } else if (e.key === 'Escape') {
+    closeCiteModal();
+    if (copilotOpen) toggleCopilot();
+    selectedMolIdx = null;
+    renderAll();
+  }
+});
+
+// ---- Utilities ----
+function loadExample(name) {
+  document.getElementById('smilesInput').value = EXAMPLES[name];
+}
+
+function exportCSV() {
+  if (!molecules.length) return;
+  const filterNames = Object.keys(DRUG_FILTERS);
+  let csv = 'Name,SMILES,' + PROPERTIES.map(p => p.key).join(',') + ',' + filterNames.map(fn => DRUG_FILTERS[fn].label + '_Pass').join(',') + ',Pareto_Optimal\n';
+  molecules.forEach(m => {
+    csv += `"${m.name}","${m.smiles}",`;
+    csv += PROPERTIES.map(p => (m.props[p.key] || 0).toFixed(3)).join(',');
+    csv += ',' + filterNames.map(fn => m.filters[fn].pass).join(',');
+    csv += `,${m.paretoRank===1}\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'molparetolab_export.csv';
+  a.click();
+}
+
+let sortKey = null, sortDir = 1;
+function sortTable(key) {
+  if (sortKey === key) sortDir *= -1;
+  else { sortKey = key; sortDir = 1; }
+  molecules.sort((a, b) => (a.props[key] - b.props[key]) * sortDir);
+  renderAll();
+}
+
+// ---- SDF Parsing ----
+function handleSDFDrop(event) {
+  const file = event.dataTransfer.files[0];
+  if (file) handleSDFFile(file);
+}
+
+function handleSDFFile(file) {
+  if (!file) return;
+  if (!file.name.match(/\.(sdf|sd)$/i)) {
+    setStatus('please upload a .sdf file', 'error');
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const sdfText = e.target.result;
+    const smilesLines = parseSDFtoSMILES(sdfText);
+    if (smilesLines.length === 0) {
+      setStatus('no valid molecules found in SDF', 'error');
+      return;
+    }
+    document.getElementById('smilesInput').value = smilesLines.join('\n');
+    setStatus(`loaded ${smilesLines.length} molecules from ${file.name}`, 'success');
+  };
+  reader.readAsText(file);
+}
+
+function parseSDFtoSMILES(sdfText) {
+  const blocks = sdfText.split('$$$$').filter(b => b.trim());
+  const results = [];
+
+  for (const block of blocks) {
+    const lines = block.trim().split('\n');
+    if (lines.length < 4) continue;
+
+    const molName = lines[0].trim() || '';
+    const endIdx = lines.findIndex(l => l.trim().startsWith('M  END'));
+    if (endIdx === -1) continue;
+
+    const molblock = lines.slice(0, endIdx + 1).join('\n');
+
+    try {
+      const mol = RDKitModule.get_mol(molblock);
+      if (mol && mol.is_valid()) {
+        const smiles = mol.get_smiles();
+        let name = molName;
+        if (!name) {
+          const nameMatch = block.match(/>\s*<(?:Name|MOLNAME|name|ID|_Name)>\s*\n([^\n]+)/i);
+          if (nameMatch) name = nameMatch[1].trim();
+        }
+        results.push(name ? `${smiles} ${name}` : smiles);
+        mol.delete();
+      }
+    } catch(e) {
+      // Skip invalid molecules
+    }
+  }
+  return results;
+}
+
+// ---- Shareable URLs ----
+function encodeURLState() {
+  const lines = molecules.map(m => `${m.smiles} ${m.name}`);
+  const payload = lines.join('\n');
+  return LZString.compressToEncodedURIComponent(payload);
+}
+
+function decodeURLState(compressed) {
+  try {
+    return LZString.decompressFromEncodedURIComponent(compressed) || null;
+  } catch(e) {
+    return null;
+  }
+}
+
+function shareURL() {
+  if (!molecules.length) return;
+  const compressed = encodeURLState();
+  const url = new URL(window.location.href.split('?')[0]);
+  url.searchParams.set('m', compressed);
+  navigator.clipboard.writeText(url.toString()).then(() => {
+    showToast('Link copied to clipboard!');
+  }).catch(() => {
+    prompt('Copy this shareable link:', url.toString());
+  });
+}
+
+function loadFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  const compressed = params.get('m');
+  if (compressed) {
+    const decoded = decodeURLState(compressed);
+    if (decoded) {
+      document.getElementById('smilesInput').value = decoded;
+      return true;
+    }
+  }
+  return false;
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+// ---- Hero toggle ----
+function hideHero() {
+  const hero = document.getElementById('heroSection');
+  if (hero) hero.style.display = 'none';
+}
+
+function showShareBtn() {
+  document.getElementById('shareBtn').style.display = '';
+}
+
+// ---- Keyboard shortcuts ----
+document.addEventListener('keydown', (e) => {
+  // Enter to analyze (when textarea is focused and not shift+enter)
+  if (e.key === 'Enter' && !e.shiftKey && document.activeElement === document.getElementById('smilesInput')) {
+    e.preventDefault();
+    if (RDKitModule && !document.getElementById('analyzeBtn').disabled) {
+      analyze();
+    }
+  }
+});
+
+// ---- AI Copilot ----
+const COPILOT_PROVIDERS = {
+  google: {
+    name: 'Google Gemini',
+    model: 'gemini-2.5-flash',
+    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse',
+    buildRequest(messages, apiKey) {
+      const contents = messages.map(m => ({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: m.content }]
+      }));
+      return {
+        url: this.endpoint + '&key=' + apiKey,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: messages[0]?.role === 'system' ? messages.shift().content : '' }] },
+          contents,
+          generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
+        })
+      };
+    },
+    parseSSE(line) {
+      if (!line.startsWith('data: ')) return null;
+      try {
+        const d = JSON.parse(line.slice(6));
+        return d.candidates?.[0]?.content?.parts?.[0]?.text || null;
+      } catch { return null; }
+    }
+  },
+  openai: {
+    name: 'OpenAI',
+    model: 'gpt-4o-mini',
+    endpoint: 'https://api.openai.com/v1/chat/completions',
+    buildRequest(messages, apiKey) {
+      return {
+        url: this.endpoint,
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+        body: JSON.stringify({ model: this.model, messages, stream: true, max_tokens: 2048, temperature: 0.7 })
+      };
+    },
+    parseSSE(line) {
+      if (!line.startsWith('data: ') || line.includes('[DONE]')) return null;
+      try {
+        const d = JSON.parse(line.slice(6));
+        return d.choices?.[0]?.delta?.content || null;
+      } catch { return null; }
+    }
+  },
+  anthropic: {
+    name: 'Anthropic',
+    model: 'claude-sonnet-4-20250514',
+    endpoint: 'https://api.anthropic.com/v1/messages',
+    buildRequest(messages, apiKey) {
+      const sys = messages[0]?.role === 'system' ? messages.shift().content : '';
+      return {
+        url: this.endpoint,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({ model: this.model, system: sys, messages, stream: true, max_tokens: 2048, temperature: 0.7 })
+      };
+    },
+    parseSSE(line) {
+      if (!line.startsWith('data: ')) return null;
+      try {
+        const d = JSON.parse(line.slice(6));
+        if (d.type === 'content_block_delta') return d.delta?.text || null;
+        return null;
+      } catch { return null; }
+    }
+  }
+};
+
+let copilotOpen = false;
+let copilotProvider = null;
+let copilotKey = null;
+let copilotHistory = [];
+let copilotStreaming = false;
+
+function initCopilot() {
+  // Load saved config from localStorage
+  const saved = localStorage.getItem('molparetolab_copilot');
+  if (saved) {
+    try {
+      const cfg = JSON.parse(saved);
+      copilotProvider = cfg.provider;
+      copilotKey = cfg.key;
+    } catch {}
+  }
+  updateCopilotUI();
+}
+
+function updateCopilotUI() {
+  const setup = document.getElementById('copilotSetup');
+  const chat = document.getElementById('copilotChat');
+  if (copilotProvider && copilotKey) {
+    setup.style.display = 'none';
+    chat.style.display = 'flex';
+    document.getElementById('copilotProviderLabel').textContent = COPILOT_PROVIDERS[copilotProvider]?.name || 'AI';
+  } else {
+    setup.style.display = 'flex';
+    chat.style.display = 'none';
+  }
+}
+
+function toggleCopilot() {
+  copilotOpen = !copilotOpen;
+  document.getElementById('copilotPanel').classList.toggle('open', copilotOpen);
+  if (copilotOpen) {
+    initCopilot();
+    setTimeout(() => document.getElementById('copilotInput')?.focus(), 300);
+  }
+}
+
+function selectProvider(prov) {
+  document.querySelectorAll('.provider-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('provBtn-' + prov).classList.add('selected');
+  copilotProvider = prov;
+  const input = document.getElementById('copilotKeyInput');
+  if (prov === 'google') input.placeholder = 'Paste Google AI Studio API key';
+  else if (prov === 'openai') input.placeholder = 'Paste OpenAI API key (sk-...)';
+  else if (prov === 'anthropic') input.placeholder = 'Paste Anthropic API key (sk-ant-...)';
+  input.focus();
+}
+
+function saveCopilotKey() {
+  const key = document.getElementById('copilotKeyInput').value.trim();
+  if (!key) { showToast('Please paste an API key'); return; }
+  if (!copilotProvider) { showToast('Please select a provider first'); return; }
+  copilotKey = key;
+  localStorage.setItem('molparetolab_copilot', JSON.stringify({ provider: copilotProvider, key: copilotKey }));
+  copilotHistory = [];
+  updateCopilotUI();
+  showToast('Connected to ' + COPILOT_PROVIDERS[copilotProvider].name);
+}
+
+function resetCopilotKey() {
+  localStorage.removeItem('molparetolab_copilot');
+  copilotProvider = null;
+  copilotKey = null;
+  copilotHistory = [];
+  document.getElementById('copilotMessages').innerHTML = '<div class="copilot-msg system">AI copilot ready. Ask anything about your molecules.</div>';
+  document.getElementById('copilotSuggestions').style.display = 'flex';
+  document.querySelectorAll('.provider-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('copilotKeyInput').value = '';
+  updateCopilotUI();
+}
+
+function clearCopilotChat() {
+  copilotHistory = [];
+  document.getElementById('copilotMessages').innerHTML = '<div class="copilot-msg system">AI copilot ready. Ask anything about your molecules.</div>';
+  document.getElementById('copilotSuggestions').style.display = 'flex';
+  showToast('Chat cleared');
+}
+
+function buildSystemPrompt() {
+  if (!molecules.length) return 'No molecules have been analyzed yet. Ask the user to paste SMILES and click Analyze first.';
+
+  const molData = molecules.map((m, i) => {
+    const props = PROPERTIES.map(p => `${p.key}: ${(m.props[p.key] || 0).toFixed(2)}`).join(', ');
+    const filters = Object.entries(DRUG_FILTERS).map(([k,v]) => `${v.label}: ${m.filters[k].pass ? 'PASS' : 'FAIL (' + m.filters[k].violations + ' violations)'}`).join(', ');
+    const rank = m.paretoRank === 1 ? 'PARETO-OPTIMAL (non-dominated)' : `Dominated (Pareto rank ${m.paretoRank})`;
+    return `[${i+1}] ${m.name} (${m.smiles})\n    Properties: ${props}\n    Filters: ${filters}\n    Status: ${rank}`;
+  }).join('\n');
+
+  // Dominance relationships
+  let domInfo = '';
+  for (let i = 0; i < molecules.length; i++) {
+    const dominated = [];
+    for (let j = 0; j < molecules.length; j++) {
+      if (i !== j && molecules[i].dominates?.includes(j)) dominated.push(molecules[j].name);
+    }
+    if (dominated.length) domInfo += `  ${molecules[i].name} dominates: ${dominated.join(', ')}\n`;
+  }
+
+  return `You are the AI Copilot inside MolParetoLab, an interactive multi-objective Pareto analysis tool for drug discovery. You are a brilliant medicinal chemistry advisor.
+
+CONTEXT: The user has ${molecules.length} molecules loaded. ${molecules.filter(m=>m.paretoRank===1).length} are Pareto-optimal (non-dominated across MW, LogP, HBD, HBA, TPSA, RotBonds).
+
+MOLECULAR DATA:
+${molData}
+
+${domInfo ? 'DOMINANCE RELATIONSHIPS:\n' + domInfo : ''}
+
+ANALYSIS NOTES:
+- Pareto-optimal means no other molecule is better on ALL objectives simultaneously
+- Lower MW, moderate LogP (1-3), low HBD/HBA, moderate TPSA, few RotBonds = generally more drug-like
+- Lipinski Ro5: MW≤500, LogP≤5, HBD≤5, HBA≤10
+- Veber: RotBonds≤10, TPSA≤140
+- BBB penetration favors: TPSA<79, LogP 1-3
+
+CURRENT VIEW: The user is looking at the "${VIEW_NAMES[currentView] || currentView}" tab.
+
+INSTRUCTIONS:
+- Give specific, actionable advice referencing the actual molecule data above
+- When suggesting modifications, be concrete (e.g., "replace the hydroxyl with a methyl ether to reduce HBD")
+- When writing paper text, use formal scientific prose
+- Be concise but thorough. Use markdown formatting.
+- You can reference molecules by name or number [1], [2], etc.
+- If asked about modifications, suggest specific structural changes and predict their effect on properties`;
+}
+
+function addCopilotMessage(role, content) {
+  const container = document.getElementById('copilotMessages');
+  const div = document.createElement('div');
+  div.className = 'copilot-msg ' + (role === 'user' ? 'user' : 'ai');
+  div.innerHTML = renderMarkdown(content);
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+function renderMarkdown(text) {
+  // Simple markdown rendering
+  return text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/```([\s\S]*?)```/g, '<pre>$1</pre>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    .replace(/\n/g, '<br>');
+}
+
+function askSuggestion(btn) {
+  const text = btn.textContent;
+  document.getElementById('copilotInput').value = text;
+  sendCopilotMessage();
+}
+
+async function sendCopilotMessage() {
+  const input = document.getElementById('copilotInput');
+  const text = input.value.trim();
+  if (!text || copilotStreaming) return;
+  if (!copilotProvider || !copilotKey) { showToast('Please connect an AI provider first'); return; }
+
+  input.value = '';
+  input.style.height = 'auto';
+
+  // Add user message
+  addCopilotMessage('user', text);
+  copilotHistory.push({ role: 'user', content: text });
+
+  // Hide suggestions after first message
+  document.getElementById('copilotSuggestions').style.display = 'none';
+
+  // Show typing indicator
+  const typingDiv = document.createElement('div');
+  typingDiv.className = 'copilot-msg ai';
+  typingDiv.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+  const container = document.getElementById('copilotMessages');
+  container.appendChild(typingDiv);
+  container.scrollTop = container.scrollHeight;
+
+  copilotStreaming = true;
+  document.getElementById('copilotSendBtn').disabled = true;
+
+  try {
+    const provider = COPILOT_PROVIDERS[copilotProvider];
+    const apiMessages = [
+      { role: 'system', content: buildSystemPrompt() },
+      ...copilotHistory
+    ];
+
+    const req = provider.buildRequest([...apiMessages], copilotKey);
+    const response = await fetch(req.url, {
+      method: 'POST',
+      headers: req.headers,
+      body: req.body
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`API error ${response.status}: ${errText.slice(0, 200)}`);
+    }
+
+    // Remove typing indicator
+    typingDiv.remove();
+
+    // Create AI message div for streaming
+    const aiDiv = addCopilotMessage('ai', '');
+    let fullText = '';
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const chunk = provider.parseSSE(line.trim());
+        if (chunk) {
+          fullText += chunk;
+          aiDiv.innerHTML = renderMarkdown(fullText);
+          container.scrollTop = container.scrollHeight;
+        }
+      }
+    }
+
+    // Process remaining buffer
+    if (buffer.trim()) {
+      const chunk = provider.parseSSE(buffer.trim());
+      if (chunk) {
+        fullText += chunk;
+        aiDiv.innerHTML = renderMarkdown(fullText);
+      }
+    }
+
+    copilotHistory.push({ role: 'assistant', content: fullText });
+
+    // Keep history manageable (last 10 exchanges)
+    if (copilotHistory.length > 20) copilotHistory = copilotHistory.slice(-20);
+
+  } catch (err) {
+    typingDiv.remove();
+    const errDiv = addCopilotMessage('ai', '**Error:** ' + err.message + '\n\nCheck your API key and try again.');
+    errDiv.style.borderColor = 'var(--red)';
+    console.error('Copilot error:', err);
+  }
+
+  copilotStreaming = false;
+  document.getElementById('copilotSendBtn').disabled = false;
+  input.focus();
+}
+
+// Auto-resize copilot input
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'copilotInput') {
+    e.target.style.height = 'auto';
+    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+  }
+});
+
+// Enter to send in copilot
+document.addEventListener('keydown', (e) => {
+  if (e.target.id === 'copilotInput' && e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendCopilotMessage();
+  }
+});
+
+// Show copilot FAB when molecules are analyzed
+function showCopilotFab() {
+  document.getElementById('copilotFab').classList.add('visible');
+}
+
+// ---- Export Figure ----
+const VIEW_NAMES = {
+  pareto: 'Pareto Scatter', egg: 'BOILED-Egg Plot', radar: 'Property Radar',
+  parallel: 'Parallel Coordinates', similarity: 'Tanimoto Similarity',
+  scoring: 'Scoring Profiles', table: 'Properties Table',
+  dominance: 'Dominance Matrix', compare: 'Molecule Comparison'
+};
+
+function exportFigure() {
+  if (!molecules.length) return;
+
+  const viewName = VIEW_NAMES[currentView] || currentView;
+
+  // Find the source canvas/chart
+  let sourceCanvas = null;
+
+  if (currentView === 'egg') {
+    sourceCanvas = document.getElementById('eggCanvas');
+  } else if (currentView === 'parallel') {
+    sourceCanvas = document.getElementById('parallelCanvas');
+  } else if (currentView === 'similarity') {
+    sourceCanvas = document.getElementById('simHeatmap');
+  } else if (['pareto', 'radar', 'compare'].includes(currentView)) {
+    // Chart.js views -- use first tracked chart instance for best quality
+    if (chartInstances.length > 0) {
+      sourceCanvas = chartInstances[0].canvas;
+    } else {
+      const container = document.getElementById('content');
+      if (container) {
+        const canvases = container.querySelectorAll('canvas');
+        if (canvases.length > 0) sourceCanvas = canvases[0];
+      }
+    }
+  }
+
+  if (!sourceCanvas) {
+    showToast('Switch to a chart view (Pareto, BOILED-Egg, Radar, etc.) to export');
+    return;
+  }
+
+  // Build export canvas with title + chart + watermark
+  const padding = 40;
+  const titleH = 50;
+  const watermarkH = 30;
+  const srcW = sourceCanvas.width || sourceCanvas.offsetWidth;
+  const srcH = sourceCanvas.height || sourceCanvas.offsetHeight;
+
+  // Use a reasonable export size
+  const scale = Math.max(1, Math.min(2, 2048 / srcW));
+  const exportW = Math.round(srcW * scale) + padding * 2;
+  const exportH = Math.round(srcH * scale) + titleH + watermarkH + padding * 2;
+
+  const offscreen = document.createElement('canvas');
+  offscreen.width = exportW;
+  offscreen.height = exportH;
+  const ctx = offscreen.getContext('2d');
+
+  // Background
+  ctx.fillStyle = '#09090b';
+  ctx.fillRect(0, 0, exportW, exportH);
+
+  // Title
+  ctx.fillStyle = '#e4e4e7';
+  ctx.font = 'bold 20px Geist, system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('MolParetoLab', padding, titleH);
+  ctx.fillStyle = '#71717a';
+  ctx.font = '14px Geist, system-ui, sans-serif';
+  const titleWidth = ctx.measureText('MolParetoLab').width;
+  ctx.fillText(' — ' + viewName, padding + titleWidth, titleH);
+
+  // Draw the chart
+  try {
+    ctx.drawImage(sourceCanvas, padding, titleH + 10, Math.round(srcW * scale), Math.round(srcH * scale));
+  } catch(e) {
+    showToast('Could not export this view');
+    return;
+  }
+
+  // Watermark
+  ctx.fillStyle = '#3f3f46';
+  ctx.font = '11px Geist, system-ui, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('molparetolab.ilkham.com', exportW - padding, exportH - 10);
+
+  // Molecule count
+  ctx.textAlign = 'left';
+  ctx.fillText(molecules.length + ' molecules · ' + molecules.filter(m => m.paretoRank === 1).length + ' pareto-optimal', padding, exportH - 10);
+
+  // Download
+  offscreen.toBlob((blob) => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'molparetolab_' + currentView + '.png';
+    a.click();
+    showToast('Figure exported as PNG');
+  }, 'image/png');
+}
+
+// ---- Cite Modal ----
+function openCiteModal() {
+  const modal = document.getElementById('citeModal');
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden', 'false');
+  // Force reflow so the transition fires
+  modal.offsetHeight;
+  modal.classList.add('active');
+}
+
+function closeCiteModal() {
+  const modal = document.getElementById('citeModal');
+  modal.classList.remove('active');
+  modal.setAttribute('aria-hidden', 'true');
+  modal.addEventListener('transitionend', () => {
+    if (!modal.classList.contains('active')) modal.style.display = 'none';
+  }, { once: true });
+}
+
+function copyBibtex() {
+  const text = document.getElementById('bibtexText').textContent;
+  navigator.clipboard.writeText(text).then(() => showToast('BibTeX copied!')).catch(() => {});
+}
+
+function copyCitation() {
+  const text = document.getElementById('citationText').textContent;
+  navigator.clipboard.writeText(text).then(() => showToast('Citation copied!')).catch(() => {});
+}
+
+// ---- Boot ----
+let hasURLMolecules = loadFromURL();
+
+initRDKit().then(() => {
+  if (hasURLMolecules && RDKitModule) {
+    setTimeout(() => analyze(), 50);
+  }
+});
+</script>
+</body>
+</html>
