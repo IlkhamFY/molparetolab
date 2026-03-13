@@ -64,7 +64,7 @@ export default function Sidebar({
   };
 
   return (
-    <aside className="border-r border-white/5 p-5 overflow-y-auto max-h-[calc(100vh-73px)] custom-scrollbar">
+    <aside className="border-r border-white/5 p-5 overflow-y-auto max-h-none md:max-h-[calc(100vh-73px)] custom-scrollbar">
       <div className="text-[11px] uppercase tracking-[1.2px] text-[#9C9893] mb-2 font-semibold">
         Input SMILES
       </div>
@@ -109,7 +109,7 @@ export default function Sidebar({
         ))}
       </div>
 
-      <div className="mt-6 flex flex-col gap-2">
+      <div className="mt-6 flex flex-col gap-2 pb-20">
         {molecules.map((m, i) => {
           const isSelected = selectedMolIdx === i;
           const isCompared = compareIndices.includes(i);
@@ -142,7 +142,7 @@ export default function Sidebar({
                   dangerouslySetInnerHTML={{ __html: m.svg }} 
                 />
               <div className="flex-1 min-w-0">
-                <div className="text-[13px] font-medium text-white truncate" title={m.name}>{m.name}</div>
+                <div className="text-[13px] font-medium text-white truncate" title={m.name}>{m.name.replace(/_/g, ' ')}</div>
                 <div className="text-[11px] text-[#9C9893] mt-1 space-y-0.5">
                   <div className="flex justify-between">
                     <span>MW:</span>

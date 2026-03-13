@@ -1,61 +1,112 @@
-import { Share, Download, FileText, Star, MessageSquare } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Share, Download, FileText, Star, MessageSquare, MoreHorizontal } from 'lucide-react';
 
-const Header = ({ moleculeCount }: { moleculeCount: number }) => {
+interface HeaderProps {
+  moleculeCount: number;
+  onExportCSV?: () => void;
+  onExportFigure?: () => void;
+  onShareURL?: () => void;
+  onCite?: () => void;
+}
+
+export default function Header({ moleculeCount, onExportCSV, onExportFigure, onShareURL, onCite }: HeaderProps) {
+  const [overflowOpen, setOverflowOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOverflowOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const actions = [
+    { icon: <Share size={14} />, label: 'Share URL', onClick: onShareURL },
+    { icon: <Download size={14} />, label: 'Export Figure', onClick: onExportFigure },
+    { icon: <Download size={14} />, label: 'Export CSV', onClick: onExportCSV },
+    { icon: <FileText size={14} />, label: 'Cite', onClick: onCite },
+  ];
+
   return (
-    <header className="flex items-center justify-between px-8 py-6 border-b border-white/5">
+    <header className="flex items-center justify-between px-5 md:px-8 py-4 md:py-6 border-b border-white/5 relative">
       <div className="flex items-center gap-3">
         <div>
-          <h1 className="text-xl font-semibold tracking-tight text-white">
+          <h1 className="text-lg md:text-xl font-semibold tracking-tight text-white">
             Mol<span className="text-[#798F81]">Pareto</span>Lab
           </h1>
-          <div className="text-[13px] text-[#9C9893] mt-0.5">
+          <div className="text-[11px] md:text-[13px] text-[#9C9893] mt-0.5">
             multi-objective molecule analysis
           </div>
         </div>
         {moleculeCount > 0 && (
-          <span className="text-xs px-3 py-1 rounded-md bg-teal-500/15 text-[#798F81] font-semibold text-nowrap">
+          <span className="text-xs px-2.5 py-1 rounded-md bg-teal-500/15 text-[#798F81] font-semibold whitespace-nowrap">
             {moleculeCount} molecule{moleculeCount !== 1 ? 's' : ''}
           </span>
         )}
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
+        {/* Desktop actions — hidden on mobile */}
         {moleculeCount > 0 && (
-          <>
-            <ActionButton icon={<Share size={14} />} label="Share URL" />
-            <ActionButton icon={<Download size={14} />} label="Export Figure" />
-            <ActionButton icon={<Download size={14} />} label="Export CSV" />
-            <ActionButton icon={<FileText size={14} />} label="Cite" />
-          </>
+          <div className="hidden md:flex items-center gap-2">
+            {actions.map((a) => (
+              <button
+                key={a.label}
+                onClick={a.onClick}
+                className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-[#E8E6E3] bg-[#2C2A28] border border-white/5 rounded-md hover:border-[#5F7367] hover:text-[#798F81] transition-colors whitespace-nowrap"
+              >
+                {a.icon} {a.label}
+              </button>
+            ))}
+          </div>
         )}
+
+        {/* Mobile overflow menu — shown only on mobile when molecules exist */}
+        {moleculeCount > 0 && (
+          <div className="md:hidden relative" ref={menuRef}>
+            <button
+              onClick={() => setOverflowOpen(!overflowOpen)}
+              className="flex items-center justify-center w-9 h-9 text-[#9C9893] bg-[#2C2A28] border border-white/5 rounded-md hover:border-white/20 hover:text-white transition-colors"
+            >
+              <MoreHorizontal size={18} />
+            </button>
+            {overflowOpen && (
+              <div className="absolute top-full right-0 mt-1 bg-[#22201F] border border-white/10 rounded-lg p-1.5 min-w-[160px] shadow-xl z-50">
+                {actions.map((a) => (
+                  <button
+                    key={a.label}
+                    onClick={() => { a.onClick?.(); setOverflowOpen(false); }}
+                    className="flex items-center gap-2 w-full px-3 py-2 text-[13px] text-[#E8E6E3] rounded-md hover:bg-[#2C2A28] transition-colors text-left"
+                  >
+                    {a.icon} {a.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Star + Feedback — always visible */}
         <a
           href="https://github.com/IlkhamFY/molparetolab"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-[#9C9893] bg-[#2C2A28] border border-white/5 rounded-md hover:border-white/20 hover:text-white transition-colors"
+          className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-[#9C9893] bg-[#2C2A28] border border-white/5 rounded-md hover:border-white/20 hover:text-white transition-colors"
         >
-          <Star size={14} /> Star
+          <Star size={14} /> <span className="hidden sm:inline">Star</span>
         </a>
         <a
           href="https://github.com/IlkhamFY/molparetolab/issues"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-[#9C9893] bg-[#2C2A28] border border-white/5 rounded-md hover:border-white/20 hover:text-white transition-colors"
+          className="hidden sm:flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-[#9C9893] bg-[#2C2A28] border border-white/5 rounded-md hover:border-white/20 hover:text-white transition-colors"
         >
           <MessageSquare size={14} /> Feedback
         </a>
       </div>
     </header>
   );
-};
-
-const ActionButton = ({ icon, label, onClick }: { icon: React.ReactNode; label: string; onClick?: () => void }) => (
-  <button
-    onClick={onClick}
-    className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-medium text-white bg-[#2C2A28] border border-white/5 rounded-md hover:border-[#5F7367] hover:text-[#798F81] transition-colors"
-  >
-    {icon} {label}
-  </button>
-);
-
-export default Header;
+}

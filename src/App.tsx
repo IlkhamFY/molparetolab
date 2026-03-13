@@ -15,7 +15,7 @@ export default function App() {
     <div className="min-h-screen bg-[#09090b] flex flex-col font-sans text-[#e0e0e8]">
       <Header moleculeCount={molecules.length} />
       
-      <main className="flex-1 grid grid-cols-[380px_1fr] min-h-[calc(100vh-73px)]">
+      <main className="flex-1 grid grid-cols-1 md:grid-cols-[380px_1fr] min-h-[calc(100vh-73px)]">
         <Sidebar 
           molecules={molecules} 
           setMolecules={setMolecules} 
@@ -34,6 +34,12 @@ export default function App() {
         </div>
       </main>
 
+      {molecules.length > 0 && (
+        <footer className="text-center py-3 text-[11px] text-[#9C9893]/50">
+          Built by <a href="https://ilkham.com" target="_blank" className="hover:text-[#9C9893] transition-colors">Ilkham Yabbarov</a> · Client-side only · <a href="https://github.com/IlkhamFY/molparetolab" target="_blank" className="hover:text-[#9C9893] transition-colors">Open Source</a>
+        </footer>
+      )}
+
       <button
         onClick={() => setIsCopilotOpen(true)}
         className="fixed bottom-6 right-6 w-14 h-14 bg-[#1A1918] border border-white/10 rounded-full flex items-center justify-center text-2xl shadow-lg hover:border-[#2dd4bf] hover:text-[#2dd4bf] transition-all z-40 focus:outline-none focus:ring-2 focus:ring-[#2dd4bf]/50"
@@ -44,7 +50,7 @@ export default function App() {
 
       {/* Slide-out Copilot Panel */}
       <div 
-        className={`fixed inset-y-0 right-0 w-[420px] bg-[#12121a] border-l border-[#2a2a3a] shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed inset-y-0 right-0 w-full md:w-[420px] bg-[#12121a] border-l border-[#2a2a3a] shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
           isCopilotOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
