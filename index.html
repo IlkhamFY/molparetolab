@@ -567,6 +567,107 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
   color: var(--text2);
 }
 
+/* Collapsed sidebar */
+.sidebar-input-section { transition: all 0.2s; }
+.sidebar-input-section.collapsed {
+  display: none;
+}
+
+.sidebar-expand-btn {
+  display: none;
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text2);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: center;
+  margin-bottom: 12px;
+  transition: all 0.15s;
+}
+
+.sidebar-expand-btn:hover { border-color: var(--accent); color: var(--text); }
+.sidebar-expand-btn.visible { display: block; }
+
+/* Summary line */
+.summary-line {
+  font-size: 13px;
+  color: var(--text2);
+  padding: 12px 0;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.summary-line .sl-num {
+  font-family: 'Geist Mono', monospace;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.summary-line .sl-pareto { color: var(--green); }
+.summary-line .sl-fail { color: var(--red); }
+.summary-line .sl-sep { color: var(--border); }
+
+/* Molecule verdict */
+.mol-verdict {
+  font-size: 10px;
+  color: var(--text2);
+  margin-top: 3px;
+  line-height: 1.4;
+  max-width: 200px;
+}
+
+.mol-verdict.good { color: var(--green); }
+.mol-verdict.warn { color: var(--yellow); }
+.mol-verdict.bad { color: var(--red); }
+
+/* Why Pareto tooltip */
+.why-pareto {
+  font-size: 10px;
+  color: var(--accent2);
+  margin-top: 2px;
+  cursor: help;
+  line-height: 1.4;
+}
+
+/* Copy summary button */
+.btn-copy-summary {
+  background: var(--surface2);
+  color: var(--text2);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  font-size: 11px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+
+.btn-copy-summary:hover { border-color: var(--accent); color: var(--text); }
+
+/* Show more scatter button */
+.scatter-expand-btn {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text2);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: center;
+  margin-top: 8px;
+  transition: all 0.15s;
+}
+
+.scatter-expand-btn:hover { border-color: var(--accent); color: var(--text); }
+
 /* Axis selectors */
 .axis-selectors {
   display: flex;
@@ -1281,38 +1382,41 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
 
 <div class="main">
   <div class="sidebar">
-    <div class="section-label">Input SMILES</div>
-    <textarea id="smilesInput" placeholder="paste SMILES (one per line, optionally with name after space)&#10;&#10;CCO ethanol&#10;c1ccccc1 benzene&#10;CC(=O)Oc1ccccc1C(=O)O aspirin"></textarea>
-    <button class="btn btn-primary" id="analyzeBtn" onclick="analyze()" disabled>
-      <span class="spinner" style="margin:0;display:inline-block;width:14px;height:14px"></span>
-      loading rdkit...
-    </button>
-    <div class="kbd-hint"><kbd class="kbd">Enter</kbd> to analyze · <kbd class="kbd">Shift+Enter</kbd> new line</div>
-    <div class="status" id="status"></div>
+    <button class="sidebar-expand-btn" id="sidebarExpandBtn" onclick="toggleSidebarInput()">Edit input</button>
+    <div class="sidebar-input-section" id="sidebarInputSection">
+      <div class="section-label">Input SMILES</div>
+      <textarea id="smilesInput" placeholder="paste SMILES (one per line, optionally with name after space)&#10;&#10;CCO ethanol&#10;c1ccccc1 benzene&#10;CC(=O)Oc1ccccc1C(=O)O aspirin"></textarea>
+      <button class="btn btn-primary" id="analyzeBtn" onclick="analyze()" disabled>
+        <span class="spinner" style="margin:0;display:inline-block;width:14px;height:14px"></span>
+        loading rdkit...
+      </button>
+      <div class="kbd-hint"><kbd class="kbd">Enter</kbd> to analyze · <kbd class="kbd">Shift+Enter</kbd> new line</div>
+      <div class="status" id="status"></div>
 
-    <div class="examples">
-      <div class="section-label" style="margin-top:16px">Quick Load</div>
-      <button class="example-btn" onclick="loadExample('druglike')">
-        <span class="name">Drug-like set</span> — 8 approved drugs
-      </button>
-      <button class="example-btn" onclick="loadExample('lipinski')">
-        <span class="name">Lipinski edge cases</span> — pass/fail boundary
-      </button>
-      <button class="example-btn" onclick="loadExample('diverse')">
-        <span class="name">Diverse chemical space</span> — fragments to macrocycles
-      </button>
-      <button class="example-btn" onclick="loadExample('kinase')">
-        <span class="name">Kinase inhibitors</span> — imatinib family
-      </button>
-    </div>
+      <div class="examples">
+        <div class="section-label" style="margin-top:16px">Quick Load</div>
+        <button class="example-btn" onclick="loadExample('druglike')">
+          <span class="name">Drug-like set</span> — 8 approved drugs
+        </button>
+        <button class="example-btn" onclick="loadExample('lipinski')">
+          <span class="name">Lipinski edge cases</span> — pass/fail boundary
+        </button>
+        <button class="example-btn" onclick="loadExample('diverse')">
+          <span class="name">Diverse chemical space</span> — fragments to macrocycles
+        </button>
+        <button class="example-btn" onclick="loadExample('kinase')">
+          <span class="name">Kinase inhibitors</span> — imatinib family
+        </button>
+      </div>
 
-    <div class="section-label" style="margin-top:16px">Upload SDF</div>
-    <div class="sdf-drop" id="sdfDrop" onclick="document.getElementById('sdfFile').click()"
-         ondragover="event.preventDefault();this.classList.add('dragover')"
-         ondragleave="this.classList.remove('dragover')"
-         ondrop="event.preventDefault();this.classList.remove('dragover');handleSDFDrop(event)">
-      Drag &amp; drop .sdf file or click to browse
-      <input type="file" id="sdfFile" accept=".sdf,.sd" onchange="handleSDFFile(this.files[0])">
+      <div class="section-label" style="margin-top:16px">Upload SDF</div>
+      <div class="sdf-drop" id="sdfDrop" onclick="document.getElementById('sdfFile').click()"
+           ondragover="event.preventDefault();this.classList.add('dragover')"
+           ondragleave="this.classList.remove('dragover')"
+           ondrop="event.preventDefault();this.classList.remove('dragover');handleSDFDrop(event)">
+        Drag &amp; drop .sdf file or click to browse
+        <input type="file" id="sdfFile" accept=".sdf,.sd" onchange="handleSDFFile(this.files[0])">
+      </div>
     </div>
 
     <!-- Compare mode indicator -->
@@ -1344,6 +1448,8 @@ let currentView = 'pareto';
 let compareIndices = []; // indices of 2 molecules selected for comparison
 let activeFilters = new Set(['lipinski']); // default filter
 let pcBrushes = {}; // parallel coords brushes: { axisKey: [min, max] }
+let sidebarCollapsed = false; // collapse input section after analysis
+let showAllScatters = false; // show 2 vs 6 scatter plots
 
 // ---- Scoring profiles ----
 const SCORING_PROFILES = {
@@ -1682,6 +1788,8 @@ function renderAll() {
     showShareBtn();
     // Smart default: pick the best starting view for this set
     currentView = pickSmartView();
+    showAllScatters = false; // reset on new analysis
+    collapseSidebar();
   }
   renderMolList();
   renderContent();
@@ -1717,12 +1825,16 @@ function renderMolList() {
       }
     }
 
+    const verdict = getVerdict(m);
+    const whyPareto = getWhyPareto(m, i);
+
     card.innerHTML = `
       <div class="mol-compare-check">${compareNum}</div>
       <div class="mol-svg">${m.svg}</div>
       <div class="mol-info">
         <div class="mol-name">${m.name}</div>
-        <div class="mol-smiles">${m.smiles}</div>
+        <div class="mol-verdict ${verdict.cls}">${verdict.text}</div>
+        ${whyPareto ? `<div class="why-pareto" title="Why pareto-optimal?">${whyPareto}</div>` : ''}
       </div>
       <div class="mol-badges">
         ${m.paretoRank === 1 ? '<span class="mol-badge pareto-badge">pareto</span>' : ''}
@@ -1772,25 +1884,25 @@ function renderContent() {
     </div>`;
   }
 
+  const ro5Fail = molecules.filter(m => !m.filters.lipinski.pass).length;
+  const summaryParts = [
+    `<span class="sl-num">${molecules.length}</span> molecules`,
+    `<span class="sl-sep">·</span>`,
+    `<span class="sl-num sl-pareto">${paretoCount}</span> pareto-optimal`,
+  ];
+  if (ro5Fail > 0) {
+    summaryParts.push(`<span class="sl-sep">·</span>`);
+    summaryParts.push(`<span class="sl-num sl-fail">${ro5Fail}</span> Ro5 fail`);
+  } else {
+    summaryParts.push(`<span class="sl-sep">·</span> all Ro5 pass`);
+  }
+
   content.innerHTML = `
     ${compareBar}
-    <div class="stat-grid">
-      <div class="stat-card">
-        <div class="stat-value">${molecules.length}</div>
-        <div class="stat-label">molecules</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" style="color:var(--green)">${paretoCount}</div>
-        <div class="stat-label">pareto optimal</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" style="color:var(--cyan)">${molecules.filter(m => m.filters.lipinski.pass).length}</div>
-        <div class="stat-label">ro5 pass</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value" style="color:var(--red)">${molecules.filter(m => !m.filters.lipinski.pass).length}</div>
-        <div class="stat-label">ro5 fail</div>
-      </div>
+    <div class="summary-line">
+      ${summaryParts.join(' ')}
+      <span style="flex:1"></span>
+      <button class="btn-copy-summary" onclick="copySummary()">Copy summary</button>
     </div>
 
     <div class="tabs">
@@ -2048,7 +2160,9 @@ function renderParetoView(container) {
     </div>
     <div class="row" style="flex-wrap:wrap">`;
 
-  scatterAxes.forEach((axes, idx) => {
+  const visibleAxes = showAllScatters ? scatterAxes : scatterAxes.slice(0, 2);
+  visibleAxes.forEach((axes, idx) => {
+    const realIdx = showAllScatters ? idx : idx; // index into scatterAxes
     const xSel = propOptions.replace(`value="${axes.x}"`, `value="${axes.x}" selected`);
     const ySel = propOptions.replace(`value="${axes.y}"`, `value="${axes.y}" selected`);
 
@@ -2056,19 +2170,25 @@ function renderParetoView(container) {
       <div class="panel-header">
         <div class="panel-title" style="font-size:13px">${axes.x} vs ${axes.y}</div>
         <div class="axis-selectors">
-          <label>X: <select onchange="changeAxis(${idx},'x',this.value)">${xSel}</select></label>
-          <label>Y: <select onchange="changeAxis(${idx},'y',this.value)">${ySel}</select></label>
+          <label>X: <select onchange="changeAxis(${realIdx},'x',this.value)">${xSel}</select></label>
+          <label>Y: <select onchange="changeAxis(${realIdx},'y',this.value)">${ySel}</select></label>
         </div>
       </div>
-      <div class="chart-container"><canvas id="scatter_${idx}"></canvas></div>
+      <div class="chart-container"><canvas id="scatter_${realIdx}"></canvas></div>
     </div>`;
   });
-  html += '</div>';
+
+  if (!showAllScatters) {
+    html += `</div><button class="scatter-expand-btn" onclick="toggleScatters()">Show all 6 plots</button>`;
+  } else {
+    html += `</div><button class="scatter-expand-btn" onclick="toggleScatters()">Show fewer</button>`;
+  }
   container.innerHTML = html;
 
-  scatterAxes.forEach((axes, idx) => {
-    const canvas = document.getElementById(`scatter_${idx}`);
-    buildScatterChart(canvas, axes.x, axes.y, idx);
+  visibleAxes.forEach((axes, idx) => {
+    const realIdx = showAllScatters ? idx : idx;
+    const canvas = document.getElementById(`scatter_${realIdx}`);
+    buildScatterChart(canvas, axes.x, axes.y, realIdx);
   });
 }
 
@@ -3271,6 +3391,151 @@ function renderScoringView(container) {
     </div>
   `;
 }
+
+// ---- Sidebar toggle ----
+function toggleSidebarInput() {
+  sidebarCollapsed = !sidebarCollapsed;
+  const section = document.getElementById('sidebarInputSection');
+  const btn = document.getElementById('sidebarExpandBtn');
+  section.classList.toggle('collapsed', sidebarCollapsed);
+  btn.textContent = sidebarCollapsed ? 'Edit input' : 'Collapse';
+}
+
+function collapseSidebar() {
+  sidebarCollapsed = true;
+  const section = document.getElementById('sidebarInputSection');
+  const btn = document.getElementById('sidebarExpandBtn');
+  if (section) section.classList.add('collapsed');
+  if (btn) { btn.classList.add('visible'); btn.textContent = 'Edit input'; }
+}
+
+// ---- Molecule verdict ----
+function getVerdict(m) {
+  const issues = [];
+  const strengths = [];
+
+  // Check Lipinski
+  if (!m.filters.lipinski.pass) issues.push('Ro5 violation');
+
+  // Check individual properties
+  if (m.props.MW > 500) issues.push('heavy (MW ' + m.props.MW.toFixed(0) + ')');
+  else if (m.props.MW < 200) strengths.push('fragment-like');
+
+  if (m.props.LogP > 5) issues.push('too lipophilic');
+  else if (m.props.LogP < 0) strengths.push('hydrophilic');
+  else if (m.props.LogP >= 1 && m.props.LogP <= 3) strengths.push('good LogP');
+
+  if (m.props.TPSA < 60) strengths.push('BBB-permeable');
+  else if (m.props.TPSA > 140) issues.push('poor absorption');
+
+  if (m.props.RotBonds > 10) issues.push('too flexible');
+
+  // Pareto status
+  if (m.paretoRank === 1 && issues.length === 0) {
+    return { text: strengths.length > 0 ? strengths.join(', ') : 'well-balanced', cls: 'good' };
+  } else if (issues.length > 0) {
+    return { text: issues.join(', '), cls: issues.length >= 2 ? 'bad' : 'warn' };
+  } else if (m.paretoRank === 1) {
+    return { text: 'pareto-optimal, ' + (strengths[0] || 'balanced'), cls: 'good' };
+  } else {
+    return { text: strengths.length > 0 ? strengths.join(', ') : 'dominated', cls: 'warn' };
+  }
+}
+
+// ---- Why Pareto explanation ----
+function getWhyPareto(m, idx) {
+  if (m.paretoRank !== 1) return '';
+  const keys = ['MW', 'LogP', 'HBD', 'HBA', 'TPSA', 'RotBonds'];
+  const labels = { MW: 'MW', LogP: 'LogP', HBD: 'HBD', HBA: 'HBA', TPSA: 'TPSA', RotBonds: 'RotBonds' };
+
+  // Find properties where this molecule is best (minimum)
+  const bestAt = [];
+  keys.forEach(k => {
+    const myVal = m.props[k];
+    const isBest = molecules.every(other => other.props[k] >= myVal);
+    if (isBest) bestAt.push(labels[k] + ' ' + myVal.toFixed(1));
+  });
+
+  if (bestAt.length > 0) {
+    return 'lowest ' + bestAt.join(', ');
+  }
+
+  // If not best at any single property, explain non-dominance
+  const dominatedCount = molecules.filter(other =>
+    other !== m && keys.every(k => m.props[k] <= other.props[k]) && keys.some(k => m.props[k] < other.props[k])
+  ).length;
+
+  if (dominatedCount > 0) {
+    return 'dominates ' + dominatedCount + ' molecule' + (dominatedCount > 1 ? 's' : '');
+  }
+  return 'not dominated by any other';
+}
+
+// ---- Copy Summary ----
+function copySummary() {
+  const paretoMols = molecules.filter(m => m.paretoRank === 1);
+  const scored = computeScores();
+  const profileName = SCORING_PROFILES[currentProfile].label;
+
+  let report = `MolParetoLab Analysis Summary\n`;
+  report += `${'='.repeat(40)}\n\n`;
+  report += `${molecules.length} molecules · ${paretoMols.length} pareto-optimal`;
+  const fails = molecules.filter(m => !m.filters.lipinski.pass).length;
+  report += fails > 0 ? ` · ${fails} Ro5 failures\n\n` : ` · all Ro5 pass\n\n`;
+
+  report += `Pareto-Optimal Set:\n`;
+  paretoMols.forEach(m => {
+    const v = getVerdict(m);
+    report += `  ${m.name} — MW:${m.props.MW.toFixed(1)} LogP:${m.props.LogP.toFixed(2)} TPSA:${m.props.TPSA.toFixed(1)} (${v.text})\n`;
+  });
+
+  report += `\nScoring Ranking (${profileName}):\n`;
+  scored.slice(0, 5).forEach((r, i) => {
+    report += `  #${i+1} ${r.mol.name} — score ${r.score.toFixed(3)} (best: ${Object.entries(r.terms).sort((a,b)=>a[1]-b[1])[0][0]}, worst: ${r.worstProp})\n`;
+  });
+
+  report += `\nKey Trade-offs:\n`;
+  paretoMols.forEach(m => {
+    const why = getWhyPareto(m, molecules.indexOf(m));
+    if (why) report += `  ${m.name}: ${why}\n`;
+  });
+
+  report += `\nGenerated by MolParetoLab (https://ilkhamfy.github.io/molparetolab/)\n`;
+
+  navigator.clipboard.writeText(report).then(() => {
+    showToast('Summary copied to clipboard');
+  }).catch(() => {
+    showToast('Copy failed — check browser permissions');
+  });
+}
+
+// ---- Scatter expand toggle ----
+function toggleScatters() {
+  showAllScatters = !showAllScatters;
+  renderContent();
+}
+
+// ---- Keyboard navigation ----
+document.addEventListener('keydown', (e) => {
+  if (!molecules.length) return;
+  if (document.activeElement && document.activeElement.tagName === 'TEXTAREA') return;
+  if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+
+  if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+    e.preventDefault();
+    if (selectedMolIdx === null) selectedMolIdx = 0;
+    else selectedMolIdx = Math.min(selectedMolIdx + 1, molecules.length - 1);
+    renderAll();
+  } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+    e.preventDefault();
+    if (selectedMolIdx === null) selectedMolIdx = molecules.length - 1;
+    else selectedMolIdx = Math.max(selectedMolIdx - 1, 0);
+    renderAll();
+  } else if (e.key === 'Escape') {
+    selectedMolIdx = null;
+    renderAll();
+  }
+});
 
 // ---- Utilities ----
 function loadExample(name) {
