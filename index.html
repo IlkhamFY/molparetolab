@@ -1828,7 +1828,7 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
   <div class="header-right">
     <button class="btn-share" onclick="shareURL()" id="shareBtn" style="display:none">Share URL</button>
     <button class="btn-share" onclick="exportFigure()" id="exportFigBtn" style="display:none">📷 Export Figure</button>
-    <button class="btn btn-secondary" onclick="exportCSV()" id="exportBtn" style="display:none">Export CSV</button>
+    <button class="btn-share" onclick="exportCSV()" id="exportBtn" style="display:none">Export CSV</button>
     <button class="btn-share" onclick="openCiteModal()" id="citeBtn" style="display:none">Cite</button>
     <a href="https://github.com/IlkhamFY/molparetolab" target="_blank" rel="noopener" class="btn-github"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>Star</a>
     <a href="https://github.com/IlkhamFY/molparetolab/issues" target="_blank" rel="noopener" class="btn-github" style="text-decoration:none">Feedback</a>
@@ -1836,7 +1836,7 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
 </div>
 
 <!-- Cite Modal -->
-<div class="modal-overlay" id="citeModal" onclick="if(event.target===this)closeCiteModal()">
+<div class="modal-overlay" id="citeModal" aria-hidden="true" onclick="if(event.target===this)closeCiteModal()">
   <div class="modal">
     <h3>Cite MolParetoLab</h3>
     <div class="modal-section">
@@ -2174,17 +2174,75 @@ function hideLoading() {
   document.getElementById('loadingOverlay').classList.remove('active');
 }
 
+// ---- PubChem Name Lookup ----
+async function lookupSMILES(name) {
+  const url = `https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/name/${encodeURIComponent(name)}/property/CanonicalSMILES/JSON`;
+  const resp = await fetch(url);
+  if (!resp.ok) return null;
+  const data = await resp.json();
+  const props = data?.PropertyTable?.Properties;
+  return props?.[0]?.CanonicalSMILES || null;
+}
+
+function looksLikeName(line) {
+  const s = line.trim().split(/\s+/)[0];
+  // SMILES typically contain parentheses, =, digits after letters (rings), #, [, /, or \
+  return !/[()=\[\]#/\\@+]/.test(s) && !/[A-Za-z]\d/.test(s) && !/^\d/.test(s);
+}
+
 // ---- Analysis ----
-function analyze() {
+async function analyze() {
   const input = document.getElementById('smilesInput').value.trim();
   if (!input) { setStatus('enter SMILES first', 'error'); return; }
 
-  showLoading('Computing molecular properties...', `Processing ${input.split('\n').filter(l=>l.trim()).length} molecules with RDKit WASM`);
+  const lines = input.split('\n').filter(l => l.trim());
+
+  // Check for molecule names that need PubChem lookup
+  let resolvedInput = input;
+  const nameLookups = [];
+  for (let i = 0; i < lines.length; i++) {
+    const parts = lines[i].trim().split(/\s+/);
+    if (looksLikeName(lines[i])) {
+      nameLookups.push({ index: i, name: parts[0], rest: parts.slice(1).join(' ') });
+    }
+  }
+
+  if (nameLookups.length > 0) {
+    setStatus(`Looking up ${nameLookups.length} molecule name${nameLookups.length > 1 ? 's' : ''} on PubChem...`, '');
+    const resolvedLines = [...lines];
+    let resolved = 0, failed = 0;
+    for (const lookup of nameLookups) {
+      setStatus(`Looking up "${lookup.name}" on PubChem... (${resolved + failed + 1}/${nameLookups.length})`, '');
+      try {
+        const smiles = await lookupSMILES(lookup.name);
+        if (smiles) {
+          const label = lookup.rest || lookup.name;
+          resolvedLines[lookup.index] = `${smiles} ${label}`;
+          resolved++;
+        } else {
+          failed++;
+        }
+      } catch(e) {
+        failed++;
+      }
+    }
+    if (resolved > 0) {
+      resolvedInput = resolvedLines.join('\n');
+      // Update the textarea so the user can see resolved SMILES
+      document.getElementById('smilesInput').value = resolvedInput;
+      const msg = `Resolved ${resolved} name${resolved > 1 ? 's' : ''} via PubChem`;
+      setStatus(failed > 0 ? `${msg} (${failed} not found)` : msg, resolved > 0 ? 'success' : 'error');
+    } else if (failed > 0) {
+      setStatus(`Could not resolve ${failed} molecule name${failed > 1 ? 's' : ''} on PubChem`, 'error');
+    }
+  }
+
+  showLoading('Computing molecular properties...', `Processing ${resolvedInput.split('\n').filter(l=>l.trim()).length} molecules with RDKit WASM`);
 
   // Use setTimeout to let the loading animation render
   setTimeout(() => {
     try {
-      doAnalysis(input);
+      doAnalysis(resolvedInput);
     } catch(e) {
       setStatus('analysis error: ' + e.message, 'error');
     } finally {
@@ -4720,11 +4778,21 @@ function exportFigure() {
 
 // ---- Cite Modal ----
 function openCiteModal() {
-  document.getElementById('citeModal').classList.add('active');
+  const modal = document.getElementById('citeModal');
+  modal.style.display = 'flex';
+  modal.setAttribute('aria-hidden', 'false');
+  // Force reflow so the transition fires
+  modal.offsetHeight;
+  modal.classList.add('active');
 }
 
 function closeCiteModal() {
-  document.getElementById('citeModal').classList.remove('active');
+  const modal = document.getElementById('citeModal');
+  modal.classList.remove('active');
+  modal.setAttribute('aria-hidden', 'true');
+  modal.addEventListener('transitionend', () => {
+    if (!modal.classList.contains('active')) modal.style.display = 'none';
+  }, { once: true });
 }
 
 function copyBibtex() {
