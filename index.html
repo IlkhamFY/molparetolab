@@ -1492,6 +1492,310 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
+
+/* ---- AI Copilot Panel ---- */
+.copilot-fab {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #0d9488);
+  border: none;
+  color: white;
+  font-size: 22px;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(20,184,166,0.4);
+  z-index: 1500;
+  transition: all 0.2s;
+  display: none;
+}
+
+.copilot-fab.visible { display: flex; align-items: center; justify-content: center; }
+.copilot-fab:hover { transform: scale(1.08); box-shadow: 0 6px 28px rgba(20,184,166,0.55); }
+
+.copilot-panel {
+  position: fixed;
+  top: 0;
+  right: -420px;
+  width: 420px;
+  height: 100vh;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  transition: right 0.3s ease;
+}
+
+.copilot-panel.open { right: 0; }
+
+.copilot-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.copilot-header h3 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.copilot-header h3 .ai-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.copilot-close {
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-size: 18px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.copilot-close:hover { color: var(--text); background: var(--surface2); }
+
+.copilot-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.copilot-msg {
+  max-width: 90%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  line-height: 1.6;
+  word-wrap: break-word;
+}
+
+.copilot-msg.user {
+  align-self: flex-end;
+  background: var(--accent);
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.copilot-msg.ai {
+  align-self: flex-start;
+  background: var(--surface2);
+  color: var(--text);
+  border-bottom-left-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+.copilot-msg.ai pre {
+  background: var(--bg);
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  margin: 6px 0;
+  overflow-x: auto;
+  font-family: 'Geist Mono', monospace;
+}
+
+.copilot-msg.ai code {
+  background: var(--bg);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 12px;
+  font-family: 'Geist Mono', monospace;
+}
+
+.copilot-msg.ai strong { color: var(--accent2); }
+
+.copilot-msg.system {
+  align-self: center;
+  background: none;
+  color: var(--text2);
+  font-size: 11px;
+  text-align: center;
+  padding: 4px;
+}
+
+.copilot-suggestions {
+  padding: 8px 20px 4px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.copilot-suggestions button {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+  padding: 6px 12px;
+  font-size: 11px;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.copilot-suggestions button:hover {
+  border-color: var(--accent);
+  color: var(--accent2);
+}
+
+.copilot-input-area {
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--border);
+}
+
+.copilot-input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.copilot-input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 13px;
+  padding: 10px 14px;
+  outline: none;
+  font-family: 'Geist', system-ui, sans-serif;
+  resize: none;
+  min-height: 40px;
+  max-height: 120px;
+}
+
+.copilot-input:focus { border-color: var(--accent); }
+
+.copilot-send {
+  background: var(--accent);
+  border: none;
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.copilot-send:hover { background: var(--accent2); }
+.copilot-send:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* API key setup within copilot */
+.copilot-setup {
+  padding: 24px 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.copilot-setup h4 {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.copilot-setup p {
+  font-size: 12px;
+  color: var(--text2);
+  line-height: 1.6;
+}
+
+.copilot-setup .provider-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  width: 100%;
+  text-align: left;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.copilot-setup .provider-btn:hover { border-color: var(--accent); }
+.copilot-setup .provider-btn.selected { border-color: var(--accent); background: rgba(20,184,166,0.1); }
+
+.copilot-setup .provider-btn .provider-name { font-weight: 600; }
+.copilot-setup .provider-btn .provider-desc { font-size: 11px; color: var(--text2); }
+
+.copilot-key-input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  font-size: 13px;
+  padding: 10px 14px;
+  outline: none;
+  font-family: 'Geist Mono', monospace;
+}
+
+.copilot-key-input:focus { border-color: var(--accent); }
+
+.copilot-save-key {
+  background: var(--accent);
+  border: none;
+  color: white;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.copilot-save-key:hover { background: var(--accent2); }
+
+.copilot-privacy {
+  font-size: 10px;
+  color: var(--text2);
+  text-align: center;
+  line-height: 1.5;
+  opacity: 0.7;
+}
+
+.typing-indicator {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.typing-indicator span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text2);
+  animation: typing 1.2s ease-in-out infinite;
+}
+
+.typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+.typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+@keyframes typing {
+  0%, 100% { opacity: 0.3; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-3px); }
+}
 </style>
 </head>
 <body>
@@ -1617,6 +1921,69 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
     <div class="empty-state">
       <h3>Paste molecules to begin analysis</h3>
       <p>Enter SMILES in the sidebar or load an example set.</p>
+    </div>
+  </div>
+</div>
+
+<!-- AI Copilot FAB -->
+<button class="copilot-fab" id="copilotFab" onclick="toggleCopilot()" title="AI Copilot">✨</button>
+
+<!-- AI Copilot Panel -->
+<div class="copilot-panel" id="copilotPanel">
+  <div class="copilot-header">
+    <h3><span class="ai-dot"></span>AI Copilot</h3>
+    <button class="copilot-close" onclick="toggleCopilot()">✕</button>
+  </div>
+  <div id="copilotBody">
+    <!-- Setup view (shown when no API key) -->
+    <div class="copilot-setup" id="copilotSetup">
+      <h4>Connect an AI model</h4>
+      <p>Your API key is stored locally in your browser. It never leaves your machine and is never sent to our servers. MolParetoLab has no backend.</p>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="provider-btn" onclick="selectProvider('google')" id="provBtn-google">
+          <div>
+            <div class="provider-name">Google Gemini</div>
+            <div class="provider-desc">Free tier available. Get key at aistudio.google.com</div>
+          </div>
+        </button>
+        <button class="provider-btn" onclick="selectProvider('openai')" id="provBtn-openai">
+          <div>
+            <div class="provider-name">OpenAI</div>
+            <div class="provider-desc">GPT-4o / GPT-4o-mini. Pay-as-you-go.</div>
+          </div>
+        </button>
+        <button class="provider-btn" onclick="selectProvider('anthropic')" id="provBtn-anthropic">
+          <div>
+            <div class="provider-name">Anthropic</div>
+            <div class="provider-desc">Claude Sonnet / Haiku. Pay-as-you-go.</div>
+          </div>
+        </button>
+      </div>
+      <input class="copilot-key-input" id="copilotKeyInput" type="password" placeholder="Paste your API key here">
+      <button class="copilot-save-key" onclick="saveCopilotKey()">Connect</button>
+      <div class="copilot-privacy">🔒 Key stored in localStorage only. 100% client-side. We have zero servers.</div>
+    </div>
+    <!-- Chat view (shown when key is set) -->
+    <div id="copilotChat" style="display:none;flex:1;flex-direction:column;height:100%">
+      <div class="copilot-messages" id="copilotMessages">
+        <div class="copilot-msg system">AI copilot ready. Ask anything about your molecules.</div>
+      </div>
+      <div class="copilot-suggestions" id="copilotSuggestions">
+        <button onclick="askSuggestion(this)">Which molecule should I prioritize?</button>
+        <button onclick="askSuggestion(this)">Explain the Pareto rankings</button>
+        <button onclick="askSuggestion(this)">Suggest modifications for #1</button>
+        <button onclick="askSuggestion(this)">Write a paragraph for my paper</button>
+      </div>
+      <div class="copilot-input-area">
+        <div class="copilot-input-row">
+          <textarea class="copilot-input" id="copilotInput" placeholder="Ask about your molecules..." rows="1"></textarea>
+          <button class="copilot-send" id="copilotSendBtn" onclick="sendCopilotMessage()">→</button>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+          <div class="copilot-privacy" style="text-align:left">Powered by <span id="copilotProviderLabel">AI</span></div>
+          <button style="background:none;border:none;color:var(--text2);font-size:11px;cursor:pointer;text-decoration:underline" onclick="resetCopilotKey()">Change API key</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -1900,6 +2267,7 @@ function doAnalysis(input) {
   document.getElementById('exportBtn').style.display = '';
   document.getElementById('exportFigBtn').style.display = '';
   document.getElementById('citeBtn').style.display = '';
+  showCopilotFab();
 
   // Update molecule count badge
   const badge = document.getElementById('molCountBadge');
@@ -3888,6 +4256,350 @@ document.addEventListener('keydown', (e) => {
     }
   }
 });
+
+// ---- AI Copilot ----
+const COPILOT_PROVIDERS = {
+  google: {
+    name: 'Google Gemini',
+    model: 'gemini-2.5-flash',
+    endpoint: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse',
+    buildRequest(messages, apiKey) {
+      const contents = messages.map(m => ({
+        role: m.role === 'assistant' ? 'model' : 'user',
+        parts: [{ text: m.content }]
+      }));
+      return {
+        url: this.endpoint + '&key=' + apiKey,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          system_instruction: { parts: [{ text: messages[0]?.role === 'system' ? messages.shift().content : '' }] },
+          contents,
+          generationConfig: { temperature: 0.7, maxOutputTokens: 2048 }
+        })
+      };
+    },
+    parseSSE(line) {
+      if (!line.startsWith('data: ')) return null;
+      try {
+        const d = JSON.parse(line.slice(6));
+        return d.candidates?.[0]?.content?.parts?.[0]?.text || null;
+      } catch { return null; }
+    }
+  },
+  openai: {
+    name: 'OpenAI',
+    model: 'gpt-4o-mini',
+    endpoint: 'https://api.openai.com/v1/chat/completions',
+    buildRequest(messages, apiKey) {
+      return {
+        url: this.endpoint,
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + apiKey },
+        body: JSON.stringify({ model: this.model, messages, stream: true, max_tokens: 2048, temperature: 0.7 })
+      };
+    },
+    parseSSE(line) {
+      if (!line.startsWith('data: ') || line.includes('[DONE]')) return null;
+      try {
+        const d = JSON.parse(line.slice(6));
+        return d.choices?.[0]?.delta?.content || null;
+      } catch { return null; }
+    }
+  },
+  anthropic: {
+    name: 'Anthropic',
+    model: 'claude-sonnet-4-20250514',
+    endpoint: 'https://api.anthropic.com/v1/messages',
+    buildRequest(messages, apiKey) {
+      const sys = messages[0]?.role === 'system' ? messages.shift().content : '';
+      return {
+        url: this.endpoint,
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({ model: this.model, system: sys, messages, stream: true, max_tokens: 2048, temperature: 0.7 })
+      };
+    },
+    parseSSE(line) {
+      if (!line.startsWith('data: ')) return null;
+      try {
+        const d = JSON.parse(line.slice(6));
+        if (d.type === 'content_block_delta') return d.delta?.text || null;
+        return null;
+      } catch { return null; }
+    }
+  }
+};
+
+let copilotOpen = false;
+let copilotProvider = null;
+let copilotKey = null;
+let copilotHistory = [];
+let copilotStreaming = false;
+
+function initCopilot() {
+  // Load saved config from localStorage
+  const saved = localStorage.getItem('molparetolab_copilot');
+  if (saved) {
+    try {
+      const cfg = JSON.parse(saved);
+      copilotProvider = cfg.provider;
+      copilotKey = cfg.key;
+    } catch {}
+  }
+  updateCopilotUI();
+}
+
+function updateCopilotUI() {
+  const setup = document.getElementById('copilotSetup');
+  const chat = document.getElementById('copilotChat');
+  if (copilotProvider && copilotKey) {
+    setup.style.display = 'none';
+    chat.style.display = 'flex';
+    document.getElementById('copilotProviderLabel').textContent = COPILOT_PROVIDERS[copilotProvider]?.name || 'AI';
+  } else {
+    setup.style.display = 'flex';
+    chat.style.display = 'none';
+  }
+}
+
+function toggleCopilot() {
+  copilotOpen = !copilotOpen;
+  document.getElementById('copilotPanel').classList.toggle('open', copilotOpen);
+  if (copilotOpen) {
+    initCopilot();
+    setTimeout(() => document.getElementById('copilotInput')?.focus(), 300);
+  }
+}
+
+function selectProvider(prov) {
+  document.querySelectorAll('.provider-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('provBtn-' + prov).classList.add('selected');
+  copilotProvider = prov;
+  const input = document.getElementById('copilotKeyInput');
+  if (prov === 'google') input.placeholder = 'Paste Google AI Studio API key';
+  else if (prov === 'openai') input.placeholder = 'Paste OpenAI API key (sk-...)';
+  else if (prov === 'anthropic') input.placeholder = 'Paste Anthropic API key (sk-ant-...)';
+  input.focus();
+}
+
+function saveCopilotKey() {
+  const key = document.getElementById('copilotKeyInput').value.trim();
+  if (!key) { showToast('Please paste an API key'); return; }
+  if (!copilotProvider) { showToast('Please select a provider first'); return; }
+  copilotKey = key;
+  localStorage.setItem('molparetolab_copilot', JSON.stringify({ provider: copilotProvider, key: copilotKey }));
+  copilotHistory = [];
+  updateCopilotUI();
+  showToast('Connected to ' + COPILOT_PROVIDERS[copilotProvider].name);
+}
+
+function resetCopilotKey() {
+  localStorage.removeItem('molparetolab_copilot');
+  copilotProvider = null;
+  copilotKey = null;
+  copilotHistory = [];
+  document.getElementById('copilotMessages').innerHTML = '<div class="copilot-msg system">AI copilot ready. Ask anything about your molecules.</div>';
+  document.querySelectorAll('.provider-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('copilotKeyInput').value = '';
+  updateCopilotUI();
+}
+
+function buildSystemPrompt() {
+  if (!molecules.length) return 'No molecules have been analyzed yet. Ask the user to paste SMILES and click Analyze first.';
+
+  const molData = molecules.map((m, i) => {
+    const props = PROPERTIES.map(p => `${p.key}: ${(m.props[p.key] || 0).toFixed(2)}`).join(', ');
+    const filters = Object.entries(DRUG_FILTERS).map(([k,v]) => `${v.label}: ${m.filters[k].pass ? 'PASS' : 'FAIL (' + m.filters[k].violations + ' violations)'}`).join(', ');
+    const rank = m.paretoRank === 1 ? 'PARETO-OPTIMAL (non-dominated)' : `Dominated (Pareto rank ${m.paretoRank})`;
+    return `[${i+1}] ${m.name} (${m.smiles})\n    Properties: ${props}\n    Filters: ${filters}\n    Status: ${rank}`;
+  }).join('\n');
+
+  // Dominance relationships
+  let domInfo = '';
+  for (let i = 0; i < molecules.length; i++) {
+    const dominated = [];
+    for (let j = 0; j < molecules.length; j++) {
+      if (i !== j && molecules[i].dominates?.includes(j)) dominated.push(molecules[j].name);
+    }
+    if (dominated.length) domInfo += `  ${molecules[i].name} dominates: ${dominated.join(', ')}\n`;
+  }
+
+  return `You are the AI Copilot inside MolParetoLab, an interactive multi-objective Pareto analysis tool for drug discovery. You are a brilliant medicinal chemistry advisor.
+
+CONTEXT: The user has ${molecules.length} molecules loaded. ${molecules.filter(m=>m.paretoRank===1).length} are Pareto-optimal (non-dominated across MW, LogP, HBD, HBA, TPSA, RotBonds).
+
+MOLECULAR DATA:
+${molData}
+
+${domInfo ? 'DOMINANCE RELATIONSHIPS:\n' + domInfo : ''}
+
+ANALYSIS NOTES:
+- Pareto-optimal means no other molecule is better on ALL objectives simultaneously
+- Lower MW, moderate LogP (1-3), low HBD/HBA, moderate TPSA, few RotBonds = generally more drug-like
+- Lipinski Ro5: MW≤500, LogP≤5, HBD≤5, HBA≤10
+- Veber: RotBonds≤10, TPSA≤140
+- BBB penetration favors: TPSA<79, LogP 1-3
+
+INSTRUCTIONS:
+- Give specific, actionable advice referencing the actual molecule data above
+- When suggesting modifications, be concrete (e.g., "replace the hydroxyl with a methyl ether to reduce HBD")
+- When writing paper text, use formal scientific prose
+- Be concise but thorough. Use markdown formatting.
+- You can reference molecules by name or number [1], [2], etc.
+- If asked about modifications, suggest specific structural changes and predict their effect on properties`;
+}
+
+function addCopilotMessage(role, content) {
+  const container = document.getElementById('copilotMessages');
+  const div = document.createElement('div');
+  div.className = 'copilot-msg ' + (role === 'user' ? 'user' : 'ai');
+  div.innerHTML = renderMarkdown(content);
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+function renderMarkdown(text) {
+  // Simple markdown rendering
+  return text
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/```([\s\S]*?)```/g, '<pre>$1</pre>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+    .replace(/\n/g, '<br>');
+}
+
+function askSuggestion(btn) {
+  const text = btn.textContent;
+  document.getElementById('copilotInput').value = text;
+  sendCopilotMessage();
+}
+
+async function sendCopilotMessage() {
+  const input = document.getElementById('copilotInput');
+  const text = input.value.trim();
+  if (!text || copilotStreaming) return;
+  if (!copilotProvider || !copilotKey) { showToast('Please connect an AI provider first'); return; }
+
+  input.value = '';
+  input.style.height = 'auto';
+
+  // Add user message
+  addCopilotMessage('user', text);
+  copilotHistory.push({ role: 'user', content: text });
+
+  // Hide suggestions after first message
+  document.getElementById('copilotSuggestions').style.display = 'none';
+
+  // Show typing indicator
+  const typingDiv = document.createElement('div');
+  typingDiv.className = 'copilot-msg ai';
+  typingDiv.innerHTML = '<div class="typing-indicator"><span></span><span></span><span></span></div>';
+  const container = document.getElementById('copilotMessages');
+  container.appendChild(typingDiv);
+  container.scrollTop = container.scrollHeight;
+
+  copilotStreaming = true;
+  document.getElementById('copilotSendBtn').disabled = true;
+
+  try {
+    const provider = COPILOT_PROVIDERS[copilotProvider];
+    const apiMessages = [
+      { role: 'system', content: buildSystemPrompt() },
+      ...copilotHistory
+    ];
+
+    const req = provider.buildRequest([...apiMessages], copilotKey);
+    const response = await fetch(req.url, {
+      method: 'POST',
+      headers: req.headers,
+      body: req.body
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`API error ${response.status}: ${errText.slice(0, 200)}`);
+    }
+
+    // Remove typing indicator
+    typingDiv.remove();
+
+    // Create AI message div for streaming
+    const aiDiv = addCopilotMessage('ai', '');
+    let fullText = '';
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      for (const line of lines) {
+        const chunk = provider.parseSSE(line.trim());
+        if (chunk) {
+          fullText += chunk;
+          aiDiv.innerHTML = renderMarkdown(fullText);
+          container.scrollTop = container.scrollHeight;
+        }
+      }
+    }
+
+    // Process remaining buffer
+    if (buffer.trim()) {
+      const chunk = provider.parseSSE(buffer.trim());
+      if (chunk) {
+        fullText += chunk;
+        aiDiv.innerHTML = renderMarkdown(fullText);
+      }
+    }
+
+    copilotHistory.push({ role: 'assistant', content: fullText });
+
+    // Keep history manageable (last 10 exchanges)
+    if (copilotHistory.length > 20) copilotHistory = copilotHistory.slice(-20);
+
+  } catch (err) {
+    typingDiv.remove();
+    const errDiv = addCopilotMessage('ai', '**Error:** ' + err.message + '\n\nCheck your API key and try again.');
+    errDiv.style.borderColor = 'var(--red)';
+    console.error('Copilot error:', err);
+  }
+
+  copilotStreaming = false;
+  document.getElementById('copilotSendBtn').disabled = false;
+  input.focus();
+}
+
+// Auto-resize copilot input
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'copilotInput') {
+    e.target.style.height = 'auto';
+    e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
+  }
+});
+
+// Enter to send in copilot
+document.addEventListener('keydown', (e) => {
+  if (e.target.id === 'copilotInput' && e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendCopilotMessage();
+  }
+});
+
+// Show copilot FAB when molecules are analyzed
+function showCopilotFab() {
+  document.getElementById('copilotFab').classList.add('visible');
+}
 
 // ---- Export Figure ----
 const VIEW_NAMES = {
