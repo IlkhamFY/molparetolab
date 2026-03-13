@@ -792,6 +792,103 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
 
 .btn-share:hover { border-color: var(--accent); color: var(--accent2); }
 
+.btn-github {
+  background: var(--surface2);
+  color: var(--text2);
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  font-size: 11px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  text-decoration: none;
+}
+
+.btn-github:hover { border-color: var(--text2); color: var(--text); }
+
+.btn-github svg { width: 14px; height: 14px; fill: currentColor; }
+
+/* Cite modal */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.modal-overlay.active { opacity: 1; pointer-events: all; }
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--text);
+}
+
+.modal-section {
+  margin-bottom: 16px;
+}
+
+.modal-section label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--text2);
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.modal-section pre {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 12px;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.5;
+}
+
+.modal-section .btn-copy {
+  margin-top: 8px;
+  background: var(--surface2);
+  color: var(--text2);
+  border: 1px solid var(--border);
+  padding: 6px 14px;
+  font-size: 11px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+
+.modal-section .btn-copy:hover { border-color: var(--accent); color: var(--accent2); }
+
 .toast {
   position: fixed;
   bottom: 24px;
@@ -1423,8 +1520,34 @@ textarea::placeholder { color: var(--text2); opacity: 0.5; }
   </div>
   <div class="header-right">
     <button class="btn-share" onclick="shareURL()" id="shareBtn" style="display:none">Share URL</button>
+    <button class="btn-share" onclick="exportFigure()" id="exportFigBtn" style="display:none">📷 Export Figure</button>
     <button class="btn btn-secondary" onclick="exportCSV()" id="exportBtn" style="display:none">Export CSV</button>
-    <a href="https://github.com/IlkhamFY/molparetolab/issues" target="_blank" rel="noopener" class="btn-share" style="text-decoration:none">Feedback</a>
+    <button class="btn-share" onclick="openCiteModal()" id="citeBtn" style="display:none">Cite</button>
+    <a href="https://github.com/IlkhamFY/molparetolab" target="_blank" rel="noopener" class="btn-github"><svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>Star</a>
+    <a href="https://github.com/IlkhamFY/molparetolab/issues" target="_blank" rel="noopener" class="btn-github" style="text-decoration:none">Feedback</a>
+  </div>
+</div>
+
+<!-- Cite Modal -->
+<div class="modal-overlay" id="citeModal" onclick="if(event.target===this)closeCiteModal()">
+  <div class="modal">
+    <h3>Cite MolParetoLab</h3>
+    <div class="modal-section">
+      <label>BibTeX</label>
+      <pre id="bibtexText">@misc{yabbarov2026molparetolab,
+  author = {Yabbarov, Ilkham},
+  title = {{MolParetoLab}: Interactive Multi-Objective {Pareto} Analysis for Drug Discovery},
+  year = {2026},
+  url = {https://molparetolab.ilkham.com},
+  note = {Client-side web tool using RDKit.js WebAssembly. Open source: https://github.com/IlkhamFY/molparetolab}
+}</pre>
+      <button class="btn-copy" onclick="copyBibtex()">Copy BibTeX</button>
+    </div>
+    <div class="modal-section">
+      <label>Plain Text</label>
+      <pre id="citationText">Yabbarov, I. (2026). MolParetoLab: Interactive Multi-Objective Pareto Analysis for Drug Discovery. Available at https://molparetolab.ilkham.com</pre>
+      <button class="btn-copy" onclick="copyCitation()">Copy Citation</button>
+    </div>
   </div>
 </div>
 
@@ -1775,6 +1898,8 @@ function doAnalysis(input) {
 
   setStatus(`${molecules.length} molecules analyzed` + (errors ? `, ${errors} failed` : ''), 'success');
   document.getElementById('exportBtn').style.display = '';
+  document.getElementById('exportFigBtn').style.display = '';
+  document.getElementById('citeBtn').style.display = '';
 
   // Update molecule count badge
   const badge = document.getElementById('molCountBadge');
@@ -3762,6 +3887,124 @@ document.addEventListener('keydown', (e) => {
       analyze();
     }
   }
+});
+
+// ---- Export Figure ----
+const VIEW_NAMES = {
+  pareto: 'Pareto Scatter', egg: 'BOILED-Egg Plot', radar: 'Property Radar',
+  parallel: 'Parallel Coordinates', similarity: 'Tanimoto Similarity',
+  scoring: 'Scoring Profiles', table: 'Properties Table',
+  dominance: 'Dominance Matrix', compare: 'Molecule Comparison'
+};
+
+function exportFigure() {
+  if (!molecules.length) return;
+
+  const viewName = VIEW_NAMES[currentView] || currentView;
+
+  // Find the source canvas/chart
+  let sourceCanvas = null;
+
+  if (currentView === 'egg') {
+    sourceCanvas = document.getElementById('eggCanvas');
+  } else if (currentView === 'parallel') {
+    sourceCanvas = document.getElementById('parallelCanvas');
+  } else if (currentView === 'similarity') {
+    sourceCanvas = document.getElementById('simHeatmap');
+  } else if (['pareto', 'radar', 'compare'].includes(currentView)) {
+    // Chart.js views -- find the first chart canvas in the content area
+    const container = document.getElementById('contentArea');
+    if (container) {
+      const canvases = container.querySelectorAll('canvas');
+      if (canvases.length > 0) sourceCanvas = canvases[0];
+    }
+  }
+
+  if (!sourceCanvas) {
+    showToast('Switch to a chart view (Pareto, BOILED-Egg, Radar, etc.) to export');
+    return;
+  }
+
+  // Build export canvas with title + chart + watermark
+  const padding = 40;
+  const titleH = 50;
+  const watermarkH = 30;
+  const srcW = sourceCanvas.width || sourceCanvas.offsetWidth;
+  const srcH = sourceCanvas.height || sourceCanvas.offsetHeight;
+
+  // Use a reasonable export size
+  const scale = Math.max(1, Math.min(2, 2048 / srcW));
+  const exportW = Math.round(srcW * scale) + padding * 2;
+  const exportH = Math.round(srcH * scale) + titleH + watermarkH + padding * 2;
+
+  const offscreen = document.createElement('canvas');
+  offscreen.width = exportW;
+  offscreen.height = exportH;
+  const ctx = offscreen.getContext('2d');
+
+  // Background
+  ctx.fillStyle = '#09090b';
+  ctx.fillRect(0, 0, exportW, exportH);
+
+  // Title
+  ctx.fillStyle = '#e4e4e7';
+  ctx.font = 'bold 20px Geist, system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.fillText('MolParetoLab', padding, titleH);
+  ctx.fillStyle = '#71717a';
+  ctx.font = '14px Geist, system-ui, sans-serif';
+  const titleWidth = ctx.measureText('MolParetoLab').width;
+  ctx.fillText(' — ' + viewName, padding + titleWidth, titleH);
+
+  // Draw the chart
+  try {
+    ctx.drawImage(sourceCanvas, padding, titleH + 10, Math.round(srcW * scale), Math.round(srcH * scale));
+  } catch(e) {
+    showToast('Could not export this view');
+    return;
+  }
+
+  // Watermark
+  ctx.fillStyle = '#3f3f46';
+  ctx.font = '11px Geist, system-ui, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText('molparetolab.ilkham.com', exportW - padding, exportH - 10);
+
+  // Molecule count
+  ctx.textAlign = 'left';
+  ctx.fillText(molecules.length + ' molecules · ' + molecules.filter(m => m.paretoRank === 1).length + ' pareto-optimal', padding, exportH - 10);
+
+  // Download
+  offscreen.toBlob((blob) => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'molparetolab_' + currentView + '.png';
+    a.click();
+    showToast('Figure exported as PNG');
+  }, 'image/png');
+}
+
+// ---- Cite Modal ----
+function openCiteModal() {
+  document.getElementById('citeModal').classList.add('active');
+}
+
+function closeCiteModal() {
+  document.getElementById('citeModal').classList.remove('active');
+}
+
+function copyBibtex() {
+  const text = document.getElementById('bibtexText').textContent;
+  navigator.clipboard.writeText(text).then(() => showToast('BibTeX copied!')).catch(() => {});
+}
+
+function copyCitation() {
+  const text = document.getElementById('citationText').textContent;
+  navigator.clipboard.writeText(text).then(() => showToast('Citation copied!')).catch(() => {});
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeCiteModal();
 });
 
 // ---- Boot ----
