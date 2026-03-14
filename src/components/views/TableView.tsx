@@ -147,13 +147,13 @@ function DominanceMatrix({ molecules }: { molecules: Molecule[] }) {
       <div className="overflow-x-auto pb-4">
         <div 
           className="grid gap-[1px] bg-[#3a3a4a] border-t border-l border-[#3a3a4a] text-[11px] font-mono"
-          style={{ gridTemplateColumns: `auto repeat(${molecules.length}, 40px)`, width: 'max-content' }}
+          style={{ gridTemplateColumns: `auto repeat(${molecules.length}, 56px)`, width: 'max-content' }}
         >
           {/* Top Header Row */}
           <div className="bg-[#1a1a24] p-2 flex items-center justify-end font-semibold text-[#8888a0]"></div>
           {molecules.map(m => (
-            <div key={'h_'+m.smiles} className="bg-[#1a1a24] text-[#8888a0] flex items-center justify-center -rotate-45 h-[60px] translate-y-2 truncate" title={m.name}>
-              {m.name.slice(0,4)}
+            <div key={'h_'+m.smiles} className="bg-[#1a1a24] text-[#8888a0] flex items-center justify-center w-[56px] h-10 px-1 truncate text-center text-[10px]" title={m.name}>
+              {m.name}
             </div>
           ))}
 
@@ -167,17 +167,17 @@ function DominanceMatrix({ molecules }: { molecules: Molecule[] }) {
               
               {/* Row Cells */}
               {molecules.map((_colMol, j) => {
-                let cellClass = 'bg-[#12121a] text-[#555]';
+                let cellClass = 'bg-[#12121a] text-[#555] w-[56px]';
                 let cellText = '~';
 
                 if (i === j) {
-                  cellClass = 'bg-[#2a2a3a] text-[#888';
+                  cellClass = 'bg-[#2a2a3a] text-[#888 w-[56px]';
                   cellText = '-';
                 } else if (rowMol.dominates?.includes(j)) {
-                  cellClass = 'bg-[#22c55e]/20 text-[#22c55e] font-bold';
+                  cellClass = 'bg-[#22c55e]/20 text-[#22c55e] font-bold w-[56px]';
                   cellText = 'DOM';
                 } else if (rowMol.dominatedBy?.includes(j)) {
-                  cellClass = 'bg-[#ef4444]/20 text-[#ef4444]';
+                  cellClass = 'bg-[#ef4444]/20 text-[#ef4444] w-[56px]';
                   cellText = 'dom';
                 }
 

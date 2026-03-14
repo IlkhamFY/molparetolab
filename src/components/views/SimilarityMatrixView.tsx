@@ -15,6 +15,7 @@ export default function SimilarityMatrixView({ molecules }: { molecules: Molecul
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoverCell, setHoverCell] = useState<{ i: number; j: number } | null>(null);
+  const [xLabelLayout, setXLabelLayout] = useState<{ offsetX: number; size: number } | null>(null);
 
   const { matrix, diversity } = useMemo(() => {
     const mat = computeTanimotoMatrix(molecules);
@@ -42,12 +43,13 @@ export default function SimilarityMatrixView({ molecules }: { molecules: Molecul
     const W = rect.width;
     const H = rect.height;
     const padLeft = 80;
-    const padBottom = 80;
+    const padBottom = 24;
     const cellW = (W - padLeft - 20) / n;
     const cellH = (H - padBottom - 20) / n;
     const size = Math.min(cellW, cellH, 24);
     const offsetX = padLeft + ((W - padLeft - 20) - size * n) / 2 + 10;
     const offsetY = 10;
+    setXLabelLayout({ offsetX, size });
 
     ctx.fillStyle = '#12121a';
     ctx.fillRect(0, 0, W, H);
@@ -73,21 +75,13 @@ export default function SimilarityMatrixView({ molecules }: { molecules: Molecul
       const y = offsetY + i * size + size / 2;
       ctx.fillText(labels[i] || `${i + 1}`, padLeft - 6, y);
     }
-    ctx.save();
-    ctx.translate(offsetX + (size * n) / 2, H - 30);
-    ctx.rotate(-Math.PI / 2);
-    ctx.textAlign = 'center';
-    for (let j = 0; j < n; j++) {
-      ctx.fillText(labels[j] || `${j + 1}`, j * size + size / 2, 0);
-    }
-    ctx.restore();
   }, [matrix, n, labels, hoverCell]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!containerRef.current || n === 0) return;
     const rect = containerRef.current.getBoundingClientRect();
     const padLeft = 80;
-    const padBottom = 80;
+    const padBottom = 24;
     const cellW = (rect.width - padLeft - 20) / n;
     const cellH = (rect.height - padBottom - 20) / n;
     const size = Math.min(cellW, cellH, 24);
@@ -122,6 +116,23 @@ export default function SimilarityMatrixView({ molecules }: { molecules: Molecul
           onMouseLeave={handleMouseLeave}
         />
       </div>
+      {xLabelLayout && n > 0 && (
+        <div
+          className="flex mt-1 overflow-x-auto"
+          style={{ marginLeft: xLabelLayout.offsetX, width: xLabelLayout.size * n, minHeight: 28 }}
+        >
+          {labels.map((label, j) => (
+            <div
+              key={j}
+              className="text-[10px] text-[#9C9893] flex-shrink-0 truncate text-center"
+              style={{ width: xLabelLayout.size }}
+              title={molecules[j]?.name ?? ''}
+            >
+              {label || `${j + 1}`}
+            </div>
+          ))}
+        </div>
+      )}
       {hoverCell && (
         <div className="mt-3 text-[12px] text-[#9C9893]">
           <span className="text-[#E8E6E3]">{molecules[hoverCell.i].name}</span> vs{' '}

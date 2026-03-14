@@ -62,18 +62,25 @@ export default function ParetoView({ molecules }: { molecules: Molecule[] }) {
         ))}
       </div>
 
-      {/* Legend */}
-      <div className="flex items-center gap-4 text-[12px] text-[#9C9893] mb-4">
-        <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#22c55e]"></span> Ro5 Pass
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-0 h-0 border-l-[6px] border-r-[6px] border-b-[10px] border-l-transparent border-r-transparent border-b-[#ef4444]"></span> Ro5 Fail
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-6 h-0 border-t-2 border-dashed border-[#14b8a6]"></span> Pareto Front
-        </div>
-      </div>
+      {/* Legend: reflects first active overlay filter */}
+      {(() => {
+        const filterOrder = ['lipinski', 'veber', 'ghose'] as const;
+        const active = filterOrder.find(k => activeFilters.has(k));
+        const label = active ? (DRUG_FILTERS[active] as { label: string }).label : 'Filter';
+        return (
+          <div className="flex items-center gap-4 text-[12px] text-[#9C9893] mb-4">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#22c55e]"></span> {label} Pass
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-0 h-0 border-l-[6px] border-r-[6px] border-b-[10px] border-l-transparent border-r-transparent border-b-[#ef4444]"></span> {label} Fail
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-6 h-0 border-t-2 border-dashed border-[#14b8a6]"></span> Pareto Front
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Grid */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -105,7 +112,7 @@ export default function ParetoView({ molecules }: { molecules: Molecule[] }) {
               </div>
             </div>
             <div className="flex-1 relative">
-               <ScatterChart molecules={molecules} xKey={axis.x} yKey={axis.y} />
+               <ScatterChart molecules={molecules} xKey={axis.x} yKey={axis.y} activeFilters={activeFilters} />
             </div>
           </div>
         ))}
@@ -121,14 +128,18 @@ export default function ParetoView({ molecules }: { molecules: Molecule[] }) {
   );
 }
 
-function ScatterChart({ molecules, xKey, yKey }: { molecules: Molecule[], xKey: keyof Molecule['props'], yKey: keyof Molecule['props'] }) {
+const FILTER_ORDER = ['lipinski', 'veber', 'ghose'] as const;
+
+function ScatterChart({ molecules, xKey, yKey, activeFilters }: { molecules: Molecule[]; xKey: keyof Molecule['props']; yKey: keyof Molecule['props']; activeFilters: Set<string> }) {
   const data = useMemo(() => {
     const passData: { x: number; y: number; label: string; molIndex: number }[] = [];
     const failData: { x: number; y: number; label: string; molIndex: number }[] = [];
+    const filterKey = FILTER_ORDER.find((k) => activeFilters.has(k)) ?? 'lipinski';
 
     molecules.forEach((m, idx) => {
       const pt = { x: m.props[xKey], y: m.props[yKey], label: m.name, molIndex: idx };
-      if (m.filters.lipinski?.pass) passData.push(pt);
+      const pass = m.filters[filterKey]?.pass ?? false;
+      if (pass) passData.push(pt);
       else failData.push(pt);
     });
 
@@ -140,7 +151,7 @@ function ScatterChart({ molecules, xKey, yKey }: { molecules: Molecule[], xKey: 
     return {
       datasets: [
         {
-          label: 'Ro5 Pass',
+          label: 'Pass',
           data: passData,
           backgroundColor: 'rgba(34,197,94,0.7)',
           borderColor: '#22c55e',
@@ -149,7 +160,7 @@ function ScatterChart({ molecules, xKey, yKey }: { molecules: Molecule[], xKey: 
           pointStyle: 'circle' as const,
         },
         {
-          label: 'Ro5 Fail',
+          label: 'Fail',
           data: failData,
           backgroundColor: 'rgba(239,68,68,0.7)',
           borderColor: '#ef4444',
@@ -175,7 +186,7 @@ function ScatterChart({ molecules, xKey, yKey }: { molecules: Molecule[], xKey: 
           : []),
       ],
     };
-  }, [molecules, xKey, yKey]);
+  }, [molecules, xKey, yKey, activeFilters]);
 
   const tooltipRef = useRef<HTMLDivElement>(null);
 
