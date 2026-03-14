@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, Fragment } from 'react';
 import type { Molecule } from '../../utils/types';
 import { PROPERTIES, DRUG_FILTERS } from '../../utils/types';
 
@@ -159,9 +159,9 @@ function DominanceMatrix({ molecules }: { molecules: Molecule[] }) {
 
           {/* Body Rows */}
           {molecules.map((rowMol, i) => (
-            <div key={`row_${i}`} className="contents">
+            <Fragment key={`row_${i}`}>
               {/* Row Header */}
-              <div key={`rh_${i}`} className="bg-[#1a1a24] text-[#8888a0] p-2 flex items-center justify-end truncate max-w-[120px]" title={rowMol.name}>
+              <div className="bg-[#1a1a24] text-[#8888a0] p-2 flex items-center justify-end truncate max-w-[120px]" title={rowMol.name}>
                 {rowMol.name.slice(0, 10)}
               </div>
 
@@ -187,7 +187,7 @@ function DominanceMatrix({ molecules }: { molecules: Molecule[] }) {
                   </div>
                 );
               })}
-            </div>
+            </Fragment>
           ))}
         </div>
       </div>

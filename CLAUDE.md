@@ -36,6 +36,8 @@ src/
 │       ├── RadarView.tsx           Radar chart (Chart.js radar)
 │       ├── ScoringView.tsx         Weighted scoring with profiles
 │       ├── ParallelView.tsx        Parallel coordinates (Canvas 2D)
+│       ├── SimilarityMatrixView.tsx Tanimoto similarity heatmap (Canvas 2D)
+│       ├── ActivityCliffsView.tsx  Activity cliff detection
 │       ├── CompareView.tsx         Side-by-side molecule comparison (Chart.js bar)
 │       └── TableView.tsx           Properties table + dominance matrix
 ├── utils/
@@ -58,14 +60,16 @@ src/
 5. Apply drug-likeness filters (Lipinski, Veber, Ghose, Lead-like)
 6. Compute Pareto ranks + dominance relationships
 
-### Tab Views (7 tabs)
+### Tab Views (9 tabs)
 | Tab | Component | Engine |
 |-----|-----------|--------|
-| Pareto | `ParetoView` | Chart.js scatter × 6 |
+| Pareto | `ParetoView` | Chart.js scatter × 6, overlay filters |
 | BOILED-Egg | `EggView` | Canvas 2D |
 | Radar | `RadarView` | Chart.js radar |
-| Scoring | `ScoringView` | HTML + computed ranks |
-| Parallel | `ParallelView` | Canvas 2D |
+| Scoring | `ScoringView` | HTML + weighted Chebyshev scoring |
+| Parallel | `ParallelView` | Canvas 2D with brush filtering |
+| Similarity | `SimilarityMatrixView` | Canvas 2D heatmap |
+| Activity cliffs | `ActivityCliffsView` | HTML |
 | Compare | `CompareView` | Chart.js bar + HTML |
 | Table & Dominance | `TableView` | HTML table + dominance grid |
 

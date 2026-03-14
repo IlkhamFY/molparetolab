@@ -124,7 +124,7 @@ export default function App() {
 
       {/* Slide-out Copilot Panel */}
       <div 
-        className={`fixed inset-y-0 right-0 w-full md:w-[420px] bg-[#12121a] border-l border-[#2a2a3a] shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
+        className={`fixed inset-y-0 right-0 w-full md:w-[420px] bg-[#1A1918] border-l border-white/5 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
           isCopilotOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >

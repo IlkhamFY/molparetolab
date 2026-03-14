@@ -37,7 +37,7 @@ export default function RadarView({ molecules, selectedMolIdx }: { molecules: Mo
 
     return {
       label: m.name,
-      data: labels.map(k => Math.min((m.props[k as keyof Molecule['props']] as number) / maxVals[k], 1.5)),
+      data: labels.map(k => Math.max(0, Math.min((m.props[k as keyof Molecule['props']] as number) / maxVals[k], 1.5))),
       borderColor: color,
       backgroundColor: color + '35', // ~20% opacity fill
       borderWidth: isSelected ? 3 : 2,
