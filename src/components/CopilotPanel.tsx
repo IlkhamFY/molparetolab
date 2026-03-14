@@ -1,6 +1,7 @@
-import { useState } from 'react';
-import { X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Key, Eye, EyeOff } from 'lucide-react';
 import type { Molecule } from '../utils/types';
+import { type AIProvider, getStoredApiKey, setStoredApiKey, askAI } from '../utils/ai';
 
 interface CopilotPanelProps {
   isOpen: boolean;
@@ -42,24 +43,72 @@ function buildWhyPareto(molecules: Molecule[], nameOrIndex: string): string {
   return `${m.name} is Pareto-optimal because no other molecule in your set is strictly better on all six properties (MW, LogP, HBD, HBA, TPSA, RotBonds). It is best in the set on: ${best.length ? best.join(', ') : 'none (but no one dominates it)'}. So it sits on the Pareto front.`;
 }
 
+const PROVIDERS: { id: AIProvider; label: string }[] = [
+  { id: 'gemini', label: 'Google Gemini (free tier)' },
+  { id: 'openai', label: 'OpenAI' },
+  { id: 'anthropic', label: 'Anthropic' },
+];
+
 export default function CopilotPanel({ isOpen, onClose, molecules }: CopilotPanelProps) {
   const [input, setInput] = useState('');
-  const [replies, setReplies] = useState<{ user: string; text: string }[]>([]);
+  const [replies, setReplies] = useState<{ user: string; text: string; error?: boolean }[]>([]);
+  const [provider, setProvider] = useState<AIProvider>('gemini');
+  const [apiKeyInput, setApiKeyInput] = useState('');
+  const [keyVisible, setKeyVisible] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = () => {
-    const q = input.trim().toLowerCase();
+  useEffect(() => {
+    setApiKeyInput(getStoredApiKey(provider));
+  }, [provider, isOpen]);
+
+  const storedKey = getStoredApiKey(provider);
+  const hasKey = storedKey.length > 0;
+
+  const handleSaveKey = () => {
+    setStoredApiKey(provider, apiKeyInput);
+  };
+
+  const handleSubmit = async () => {
+    const q = input.trim();
     if (!q) return;
     setInput('');
+    const userMsg = q;
+
+    if (hasKey) {
+      setLoading(true);
+      setReplies((prev) => [...prev, { user: userMsg, text: '…' }]);
+      try {
+        const text = await askAI(provider, storedKey, userMsg, molecules);
+        setReplies((prev) => {
+          const next = [...prev];
+          next[next.length - 1] = { user: userMsg, text };
+          return next;
+        });
+      } catch (e) {
+        const errMsg = e instanceof Error ? e.message : String(e);
+        setReplies((prev) => {
+          const next = [...prev];
+          next[next.length - 1] = { user: userMsg, text: `Error: ${errMsg}`, error: true };
+          return next;
+        });
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    const qLower = q.toLowerCase();
     let text: string;
-    if (q.includes('summar') || q.includes('trade-off') || q.includes('overview') || q === 'summary') {
+    if (qLower.includes('summar') || qLower.includes('trade-off') || qLower.includes('overview') || qLower === 'summary') {
       text = buildCannedSummary(molecules);
-    } else if (q.includes('why') && (q.includes('pareto') || q.includes('optimal'))) {
+    } else if (qLower.includes('why') && (qLower.includes('pareto') || qLower.includes('optimal'))) {
       const name = q.replace(/why\s*(is\s*)?/i, '').replace(/\s*(pareto|optimal).*$/i, '').trim() || (molecules.length > 0 ? molecules[0].name : '');
       text = buildWhyPareto(molecules, name);
     } else {
-      text = "Coming soon — full AI answers in a future release. Try: \"Why is [name] Pareto-optimal?\" or \"Summarize my set\" for canned answers.";
+      text = 'Add an API key in settings (BYOK — stored only in your browser) to get full AI answers. Try "Summarize my set" or "Why is [name] Pareto-optimal?" for canned answers without a key.';
     }
-    setReplies((prev) => [...prev, { user: q, text }]);
+    setReplies((prev) => [...prev, { user: userMsg, text }]);
   };
 
   return (
@@ -82,15 +131,73 @@ export default function CopilotPanel({ isOpen, onClose, molecules }: CopilotPane
       </div>
 
       <div className="flex-1 p-5 overflow-y-auto custom-scrollbar space-y-4">
+        {/* BYOK settings */}
+        <div className="border border-white/5 rounded-lg bg-[#1A1918]">
+          <button
+            type="button"
+            onClick={() => setSettingsOpen((o) => !o)}
+            className="w-full px-3 py-2 flex items-center justify-between text-left text-[12px] text-[#9C9893] hover:text-[#E8E6E3]"
+          >
+            <span className="flex items-center gap-2">
+              <Key size={14} />
+              API key (BYOK — stored in browser only)
+            </span>
+            <span className="text-[10px]">{settingsOpen ? '▼' : '▶'}</span>
+          </button>
+          {settingsOpen && (
+            <div className="px-3 pb-3 pt-0 space-y-2 border-t border-white/5">
+              <label className="block text-[11px] text-[#9C9893]">Provider</label>
+              <select
+                value={provider}
+                onChange={(e) => setProvider(e.target.value as AIProvider)}
+                className="w-full bg-[#22201F] border border-white/10 rounded px-2 py-1.5 text-[12px] text-[#E8E6E3]"
+              >
+                {PROVIDERS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+              <label className="block text-[11px] text-[#9C9893]">API key</label>
+              <div className="flex gap-1">
+                <input
+                  type={keyVisible ? 'text' : 'password'}
+                  value={apiKeyInput}
+                  onChange={(e) => setApiKeyInput(e.target.value)}
+                  onBlur={handleSaveKey}
+                  placeholder="Paste key — never sent to our server"
+                  className="flex-1 bg-[#22201F] border border-white/10 rounded px-2 py-1.5 text-[12px] text-[#E8E6E3] placeholder-[#6b6b7a]"
+                />
+                <button
+                  type="button"
+                  onClick={() => setKeyVisible((v) => !v)}
+                  className="p-1.5 text-[#9C9893] hover:text-[#E8E6E3] rounded border border-white/10"
+                  title={keyVisible ? 'Hide' : 'Show'}
+                >
+                  {keyVisible ? <EyeOff size={14} /> : <Eye size={14} />}
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={handleSaveKey}
+                className="w-full py-1.5 bg-[#5F7367] text-white text-[11px] font-medium rounded hover:bg-[#798F81]"
+              >
+                Save key
+              </button>
+              {hasKey && <p className="text-[10px] text-[#22c55e]">Key saved for {PROVIDERS.find((p) => p.id === provider)?.label}</p>}
+            </div>
+          )}
+        </div>
+
         <div className="text-[11px] text-[#9C9893] text-center p-1">
-          Ask &quot;Summarize my set&quot; or &quot;Why is [name] Pareto-optimal?&quot;
+          {hasKey ? 'Ask anything about your molecules.' : 'Add a key above for full AI, or try canned: "Summarize my set", "Why is [name] Pareto-optimal?"'}
         </div>
         {replies.map((r, i) => (
           <div key={i} className="space-y-1">
             <div className="text-[11px] text-[#798F81] font-medium">You</div>
             <div className="text-[12px] text-[#E8E6E3] bg-[#1A1918] rounded px-2 py-1.5 border border-white/5">{r.user}</div>
             <div className="text-[11px] text-[#798F81] font-medium mt-2">Copilot</div>
-            <div className="text-[12px] text-[#E8E6E3] bg-[#1A1918] rounded px-2 py-1.5 border border-white/5 whitespace-pre-wrap">{r.text}</div>
+            <div className={`text-[12px] bg-[#1A1918] rounded px-2 py-1.5 border border-white/5 whitespace-pre-wrap ${r.error ? 'text-[#ef4444] border-[#ef4444]/30' : 'text-[#E8E6E3]'}`}>{r.text}</div>
           </div>
         ))}
       </div>
@@ -105,8 +212,8 @@ export default function CopilotPanel({ isOpen, onClose, molecules }: CopilotPane
             placeholder="Ask about your molecules..."
             rows={1}
           />
-          <button type="button" onClick={handleSubmit} className="bg-[#5F7367] text-white w-10 h-10 rounded-md flex-shrink-0 flex items-center justify-center hover:bg-[#798F81] transition-colors">
-            →
+          <button type="button" onClick={handleSubmit} disabled={loading} className="bg-[#5F7367] text-white w-10 h-10 rounded-md flex-shrink-0 flex items-center justify-center hover:bg-[#798F81] disabled:opacity-50 transition-colors">
+            {loading ? '…' : '→'}
           </button>
         </div>
       </div>

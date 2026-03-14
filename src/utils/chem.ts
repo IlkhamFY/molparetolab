@@ -83,7 +83,12 @@ export async function lookupChEMBL(chemblId: string): Promise<{ smiles: string; 
     const resp = await fetch(url);
     if (!resp.ok) return null;
     const data = await resp.json();
-    const smiles = data?.molecule_properties?.canonical_smiles ?? data?.canonical_smiles ?? data?.molecule_structures?.canonical_smiles?.molecule_value;
+    // ChEMBL API: molecule_structures.canonical_smiles is a string; some versions use molecule_value
+    const struct = data?.molecule_structures;
+    const smiles =
+      data?.molecule_properties?.canonical_smiles ??
+      data?.canonical_smiles ??
+      (typeof struct?.canonical_smiles === 'string' ? struct.canonical_smiles : struct?.canonical_smiles?.molecule_value);
     const name = data?.pref_name ?? data?.molecule_chembl_id ?? id;
     return smiles ? { smiles, name } : null;
   } catch {
