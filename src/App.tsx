@@ -102,6 +102,7 @@ export default function App() {
             molecules={molecules} 
             compareIndices={compareIndices} 
             selectedMolIdx={selectedMolIdx}
+            setSelectedMolIdx={setSelectedMolIdx}
             exportContainerRef={exportContainerRef}
             setCompareIndices={setCompareIndices}
           />

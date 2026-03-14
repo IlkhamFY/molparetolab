@@ -1,3 +1,4 @@
+import React from 'react';
 import { Bar } from 'react-chartjs-2';
 import type { Molecule } from '../../utils/types';
 import { DRUG_FILTERS } from '../../utils/types';
@@ -22,7 +23,8 @@ ChartJS.register(
 
 interface CompareProps {
   molecules: Molecule[];
-  compareIndices: number[]; // We'll pass this in from the parent state
+  compareIndices: number[];
+  setCompareIndices?: React.Dispatch<React.SetStateAction<number[]>>;
 }
 
 const COMPARE_PROPS = [
@@ -49,30 +51,49 @@ function getWinner(prop: typeof COMPARE_PROPS[0], v1: number, v2: number) {
   return 0;
 }
 
-export default function CompareView({ molecules, compareIndices }: CompareProps) {
-  if (!compareIndices || compareIndices.length < 2) {
+export default function CompareView({ molecules, compareIndices, setCompareIndices }: CompareProps) {
+  const needsSelection = !compareIndices || compareIndices.length < 2 || !molecules[compareIndices[0]] || !molecules[compareIndices[1]];
+
+  if (needsSelection) {
+    const idx0 = compareIndices?.[0] ?? -1;
+    const idx1 = compareIndices?.[1] ?? -1;
     return (
-      <div className="bg-[#22201F] border border-white/5 rounded-lg p-12 text-center flex flex-col items-center justify-center">
+      <div className="bg-[#22201F] border border-white/5 rounded-lg p-8">
         <h3 className="text-[17px] font-medium text-white mb-2">Select 2 molecules to compare</h3>
-        <p className="text-[#9C9893] text-[13px] max-w-sm leading-relaxed">
-          Right-click (or long-press/Cmd-click) on two molecule cards in the sidebar to select them for side-by-side comparison.
+        <p className="text-[#9C9893] text-[13px] mb-6">
+          Pick from dropdowns below, or right-click two molecule cards in the sidebar.
         </p>
+        <div className="flex gap-4 items-end">
+          <label className="flex-1">
+            <span className="text-[11px] text-[#9C9893] uppercase tracking-wider">Molecule A</span>
+            <select
+              value={idx0}
+              onChange={e => setCompareIndices?.(prev => [parseInt(e.target.value), prev[1] ?? -1])}
+              className="w-full mt-1 bg-[#1A1918] border border-white/10 rounded px-3 py-2 text-[13px] text-[#E8E6E3] outline-none focus:border-[#5F7367]"
+            >
+              <option value={-1}>Select...</option>
+              {molecules.map((m, i) => <option key={i} value={i}>{m.name}</option>)}
+            </select>
+          </label>
+          <span className="text-[#9C9893] text-[16px] pb-2">vs</span>
+          <label className="flex-1">
+            <span className="text-[11px] text-[#9C9893] uppercase tracking-wider">Molecule B</span>
+            <select
+              value={idx1}
+              onChange={e => setCompareIndices?.(prev => [prev[0] ?? -1, parseInt(e.target.value)])}
+              className="w-full mt-1 bg-[#1A1918] border border-white/10 rounded px-3 py-2 text-[13px] text-[#E8E6E3] outline-none focus:border-[#5F7367]"
+            >
+              <option value={-1}>Select...</option>
+              {molecules.map((m, i) => <option key={i} value={i}>{m.name}</option>)}
+            </select>
+          </label>
+        </div>
       </div>
     );
   }
 
   const m1 = molecules[compareIndices[0]];
   const m2 = molecules[compareIndices[1]];
-  if (!m1 || !m2) {
-    return (
-      <div className="bg-[#22201F] border border-white/5 rounded-lg p-12 text-center flex flex-col items-center justify-center">
-        <h3 className="text-[17px] font-medium text-white mb-2">Select 2 molecules to compare</h3>
-        <p className="text-[#9C9893] text-[13px] max-w-sm leading-relaxed">
-          Right-click (or long-press/Cmd-click) on two molecule cards in the sidebar to select them for side-by-side comparison.
-        </p>
-      </div>
-    );
-  }
   let m1Wins = 0, m2Wins = 0, ties = 0;
   COMPARE_PROPS.forEach(p => {
     const w = getWinner(p, m1.props[p.key as keyof Molecule['props']] as number, m2.props[p.key as keyof Molecule['props']] as number);

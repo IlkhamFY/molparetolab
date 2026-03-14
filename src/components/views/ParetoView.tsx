@@ -1,7 +1,20 @@
 import { useState, useMemo, useRef } from 'react';
 import { Scatter } from 'react-chartjs-2';
+import annotationPlugin from 'chartjs-plugin-annotation';
+import { Chart as ChartJS } from 'chart.js';
 import type { Molecule } from '../../utils/types';
 import { DRUG_FILTERS } from '../../utils/types';
+
+ChartJS.register(annotationPlugin);
+
+const LIPINSKI_THRESHOLDS: Record<string, { value: number; label: string }> = {
+  MW: { value: 500, label: 'MW ≤ 500' },
+  LogP: { value: 5, label: 'LogP ≤ 5' },
+  HBD: { value: 5, label: 'HBD ≤ 5' },
+  HBA: { value: 10, label: 'HBA ≤ 10' },
+  TPSA: { value: 140, label: 'TPSA ≤ 140' },
+  RotBonds: { value: 10, label: 'RotB ≤ 10' },
+};
 
 interface ScatterAxes {
   x: keyof Molecule['props'];
@@ -23,7 +36,7 @@ const FILTER_COLORS: Record<string, string> = {
   ghose: '#06b6d4',
 };
 
-export default function ParetoView({ molecules }: { molecules: Molecule[] }) {
+export default function ParetoView({ molecules, onSelectMolecule }: { molecules: Molecule[]; onSelectMolecule?: (idx: number) => void }) {
   const [axes, setAxes] = useState<ScatterAxes[]>(DEFAULT_AXES);
   const [showAll, setShowAll] = useState(true);
   const [activeFilter, setActiveFilter] = useState<string | null>('lipinski');
@@ -126,7 +139,7 @@ export default function ParetoView({ molecules }: { molecules: Molecule[] }) {
               </div>
             </div>
             <div className="flex-1 relative">
-               <ScatterChart molecules={molecules} xKey={axis.x} yKey={axis.y} activeFilter={activeFilter} />
+               <ScatterChart molecules={molecules} xKey={axis.x} yKey={axis.y} activeFilter={activeFilter} onSelectMolecule={onSelectMolecule} />
             </div>
           </div>
         ))}
@@ -150,7 +163,50 @@ interface PointData {
   paretoRank: number | null;
 }
 
-function ScatterChart({ molecules, xKey, yKey, activeFilter }: { molecules: Molecule[]; xKey: keyof Molecule['props']; yKey: keyof Molecule['props']; activeFilter: string | null }) {
+function buildAnnotations(xKey: string, yKey: string): Record<string, any> {
+  const annotations: Record<string, any> = {};
+  const xThresh = LIPINSKI_THRESHOLDS[xKey];
+  const yThresh = LIPINSKI_THRESHOLDS[yKey];
+  if (xThresh) {
+    annotations['xThreshold'] = {
+      type: 'line',
+      scaleID: 'x',
+      value: xThresh.value,
+      borderColor: 'rgba(234, 179, 8, 0.35)',
+      borderWidth: 1.5,
+      borderDash: [6, 4],
+      label: {
+        display: true,
+        content: xThresh.label,
+        position: 'start',
+        color: 'rgba(234, 179, 8, 0.6)',
+        font: { size: 10 },
+        backgroundColor: 'transparent',
+      },
+    };
+  }
+  if (yThresh) {
+    annotations['yThreshold'] = {
+      type: 'line',
+      scaleID: 'y',
+      value: yThresh.value,
+      borderColor: 'rgba(234, 179, 8, 0.35)',
+      borderWidth: 1.5,
+      borderDash: [6, 4],
+      label: {
+        display: true,
+        content: yThresh.label,
+        position: 'start',
+        color: 'rgba(234, 179, 8, 0.6)',
+        font: { size: 10 },
+        backgroundColor: 'transparent',
+      },
+    };
+  }
+  return annotations;
+}
+
+function ScatterChart({ molecules, xKey, yKey, activeFilter, onSelectMolecule }: { molecules: Molecule[]; xKey: keyof Molecule['props']; yKey: keyof Molecule['props']; activeFilter: string | null; onSelectMolecule?: (idx: number) => void }) {
   const data = useMemo(() => {
     const passData: PointData[] = [];
     const failData: PointData[] = [];
@@ -245,11 +301,21 @@ function ScatterChart({ molecules, xKey, yKey, activeFilter }: { molecules: Mole
         data={data as any}
         plugins={[customPlugin]}
         options={{
+          onClick: (_event: any, elements: any[]) => {
+            if (elements.length > 0 && onSelectMolecule) {
+              const el = elements[0];
+              const raw = data.datasets[el.datasetIndex]?.data[el.index] as PointData | undefined;
+              if (raw) onSelectMolecule(raw.molIndex);
+            }
+          },
           responsive: true,
           maintainAspectRatio: false,
           animation: { duration: 300 },
           plugins: {
             legend: { display: false },
+            annotation: {
+              annotations: buildAnnotations(xKey as string, yKey as string),
+            },
             tooltip: {
               enabled: false,
               external(context: unknown) {

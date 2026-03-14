@@ -10,18 +10,38 @@ import EggView from './views/EggView';
 import SimilarityMatrixView from './views/SimilarityMatrixView';
 import ActivityCliffsView from './views/ActivityCliffsView';
 
-export default function Content({ molecules, compareIndices, selectedMolIdx, exportContainerRef, setCompareIndices }: { molecules: Molecule[]; compareIndices: number[]; selectedMolIdx: number | null; exportContainerRef?: React.RefObject<HTMLDivElement | null>; setCompareIndices?: React.Dispatch<React.SetStateAction<number[]>> }) {
+export default function Content({ molecules, compareIndices, selectedMolIdx, setSelectedMolIdx, exportContainerRef, setCompareIndices }: { molecules: Molecule[]; compareIndices: number[]; selectedMolIdx: number | null; setSelectedMolIdx?: (idx: number | null) => void; exportContainerRef?: React.RefObject<HTMLDivElement | null>; setCompareIndices?: React.Dispatch<React.SetStateAction<number[]>> }) {
   const [activeTab, setActiveTab] = useState('pareto');
 
   if (molecules.length === 0) {
     return (
       <div className="p-5 flex flex-col items-center justify-center h-[calc(100vh-73px)] text-[#9C9893] text-center">
-        <h3 className="text-[17px] mb-1.5 text-[#E8E6E3] font-medium tracking-tight">
-          Paste molecules to begin analysis
-        </h3>
-        <p className="text-[13px] max-w-[320px] leading-relaxed">
-          Enter SMILES in the sidebar or load an example set.
-        </p>
+        <div className="max-w-[440px]">
+          <h3 className="text-[20px] mb-3 text-[#E8E6E3] font-semibold tracking-tight">
+            Paste molecules to begin analysis
+          </h3>
+          <p className="text-[13px] leading-relaxed mb-6">
+            Enter SMILES in the sidebar, drag an SDF file, or load an example set to get started.
+          </p>
+          <div className="grid grid-cols-1 gap-3 text-left mb-8">
+            {[
+              { icon: '⚖️', title: 'Pareto ranking', desc: 'Find non-dominated molecules across MW, LogP, HBD, HBA, TPSA, RotBonds' },
+              { icon: '🧪', title: 'Drug-likeness filters', desc: 'Lipinski Ro5, Veber, Ghose, Lead-like — with pass/fail overlay on every chart' },
+              { icon: '🤖', title: 'AI Copilot', desc: 'Ask questions about your molecules with context-aware AI (BYOK)' },
+            ].map(f => (
+              <div key={f.title} className="flex gap-3 p-3 bg-[#22201F] border border-white/5 rounded-md">
+                <span className="text-lg">{f.icon}</span>
+                <div>
+                  <div className="text-[13px] font-medium text-[#E8E6E3]">{f.title}</div>
+                  <div className="text-[11px] text-[#9C9893] mt-0.5">{f.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <p className="text-[11px] text-[#9C9893]/60">
+            100% client-side · no data leaves your browser · <a href="https://github.com/IlkhamFY/molparetolab" target="_blank" className="underline hover:text-[#9C9893]">open source</a>
+          </p>
+        </div>
       </div>
     );
   }
@@ -73,14 +93,14 @@ export default function Content({ molecules, compareIndices, selectedMolIdx, exp
 
       {/* View Content */}
       <div className="view-container" ref={exportContainerRef}>
-        {activeTab === 'pareto' && <ParetoView molecules={molecules} />}
+        {activeTab === 'pareto' && <ParetoView molecules={molecules} onSelectMolecule={setSelectedMolIdx ? (idx) => setSelectedMolIdx(idx) : undefined} />}
         {activeTab === 'egg' && <EggView molecules={molecules} />}
         {activeTab === 'radar' && <RadarView molecules={molecules} selectedMolIdx={selectedMolIdx} />}
         {activeTab === 'scoring' && <ScoringView molecules={molecules} />}
         {activeTab === 'parallel' && <ParallelView molecules={molecules} />}
         {activeTab === 'similarity' && <SimilarityMatrixView molecules={molecules} />}
         {activeTab === 'cliffs' && <ActivityCliffsView molecules={molecules} onComparePair={setCompareIndices ? (i, j) => { setCompareIndices([i, j]); setActiveTab('compare'); } : undefined} />}
-        {activeTab === 'compare' && <CompareView molecules={molecules} compareIndices={compareIndices} />}
+        {activeTab === 'compare' && <CompareView molecules={molecules} compareIndices={compareIndices} setCompareIndices={setCompareIndices} />}
         {activeTab === 'table' && <TableView molecules={molecules} selectedMolIdx={selectedMolIdx} />}
       </div>
     </div>
