@@ -53,7 +53,6 @@ export default function CompareView({ molecules, compareIndices }: CompareProps)
   if (!compareIndices || compareIndices.length < 2) {
     return (
       <div className="bg-[#22201F] border border-white/5 rounded-lg p-12 text-center flex flex-col items-center justify-center">
-        <div className="text-4xl mb-4">🔬</div>
         <h3 className="text-[17px] font-medium text-white mb-2">Select 2 molecules to compare</h3>
         <p className="text-[#9C9893] text-[13px] max-w-sm leading-relaxed">
           Right-click (or long-press/Cmd-click) on two molecule cards in the sidebar to select them for side-by-side comparison.
@@ -64,7 +63,16 @@ export default function CompareView({ molecules, compareIndices }: CompareProps)
 
   const m1 = molecules[compareIndices[0]];
   const m2 = molecules[compareIndices[1]];
-
+  if (!m1 || !m2) {
+    return (
+      <div className="bg-[#22201F] border border-white/5 rounded-lg p-12 text-center flex flex-col items-center justify-center">
+        <h3 className="text-[17px] font-medium text-white mb-2">Select 2 molecules to compare</h3>
+        <p className="text-[#9C9893] text-[13px] max-w-sm leading-relaxed">
+          Right-click (or long-press/Cmd-click) on two molecule cards in the sidebar to select them for side-by-side comparison.
+        </p>
+      </div>
+    );
+  }
   let m1Wins = 0, m2Wins = 0, ties = 0;
   COMPARE_PROPS.forEach(p => {
     const w = getWinner(p, m1.props[p.key as keyof Molecule['props']] as number, m2.props[p.key as keyof Molecule['props']] as number);
@@ -205,11 +213,11 @@ export default function CompareView({ molecules, compareIndices }: CompareProps)
             return (
               <div key={fname} className="flex justify-between items-center px-4 py-2.5 text-[12px]">
                 <span className={`w-24 text-right ${r1?.pass ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
-                  {r1?.pass ? '✓ Pass' : `✗ Fail (${r1?.violations})`}
+                  {r1?.pass ? 'Pass' : `Fail (${r1?.violations})`}
                 </span>
                 <span className="text-[#9C9893] truncate px-4">{(fdef as any).label}</span>
                 <span className={`w-24 text-left ${r2?.pass ? 'text-[#22c55e]' : 'text-[#ef4444]'}`}>
-                  {r2?.pass ? '✓ Pass' : `✗ Fail (${r2?.violations})`}
+                  {r2?.pass ? 'Pass' : `Fail (${r2?.violations})`}
                 </span>
               </div>
             );

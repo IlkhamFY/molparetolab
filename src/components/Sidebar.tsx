@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Molecule } from '../utils/types';
 import { EXAMPLES } from '../utils/types';
-import { initRDKitCache, parseAndAnalyze } from '../utils/chem';
+import { initRDKitCache, parseAndAnalyze, parseSDFFile } from '../utils/chem';
 
 interface SidebarProps {
   molecules: Molecule[];
@@ -10,6 +10,9 @@ interface SidebarProps {
   setSelectedMolIdx: (idx: number | null) => void;
   compareIndices: number[];
   setCompareIndices: React.Dispatch<React.SetStateAction<number[]>>;
+  initialPayloadFromUrl?: string | null;
+  onUrlPayloadConsumed?: () => void;
+  onToast?: (msg: string) => void;
 }
 
 export default function Sidebar({ 
@@ -18,12 +21,16 @@ export default function Sidebar({
   selectedMolIdx, 
   setSelectedMolIdx,
   compareIndices,
-  setCompareIndices
+  setCompareIndices,
+  initialPayloadFromUrl,
+  onUrlPayloadConsumed,
+  onToast
 }: SidebarProps) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isRDKitReady, setIsRDKitReady] = useState(false);
   const [status, setStatus] = useState<{msg: string, type: 'success'|'error'|'info'}>({ msg: 'loading rdkit...', type: 'info' });
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     initRDKitCache()
@@ -36,6 +43,31 @@ export default function Sidebar({
       });
   }, []);
 
+  useEffect(() => {
+    if (!isRDKitReady || !initialPayloadFromUrl?.trim() || !onUrlPayloadConsumed) return;
+    setStatus({ msg: 'Loading from link...', type: 'info' });
+    parseAndAnalyze(initialPayloadFromUrl)
+      .then(({ molecules: newMols, errors, failedLookups }) => {
+        setMolecules(newMols);
+        setCompareIndices([]);
+        setSelectedMolIdx(null);
+        onUrlPayloadConsumed();
+        if (newMols.length > 0) {
+          setStatus({ msg: `Loaded ${newMols.length} molecules from link`, type: 'success' });
+          onToast?.('Loaded from link');
+        } else {
+          setStatus({ msg: 'No valid molecules in link', type: 'error' });
+        }
+        if (errors > 0 || failedLookups > 0) {
+          setStatus((s) => ({ ...s, msg: `${s.msg} (${errors} errors, ${failedLookups} lookup failures)` }));
+        }
+      })
+      .catch((e: unknown) => {
+        onUrlPayloadConsumed();
+        setStatus({ msg: 'Failed to load from link: ' + (e instanceof Error ? e.message : String(e)), type: 'error' });
+      });
+  }, [isRDKitReady, initialPayloadFromUrl, onUrlPayloadConsumed, setMolecules, setCompareIndices, setSelectedMolIdx, onToast]);
+
   const handleAnalyze = async () => {
     if (!input.trim() || !isRDKitReady) return;
     setIsLoading(true);
@@ -44,7 +76,9 @@ export default function Sidebar({
     try {
       const { molecules: newMols, errors, failedLookups } = await parseAndAnalyze(input);
       setMolecules(newMols);
-      
+      setCompareIndices([]);
+      setSelectedMolIdx(null);
+
       let finalMsg = `${newMols.length} molecules analyzed`;
       if (errors > 0 || failedLookups > 0) {
         finalMsg += ` (${errors} errors, ${failedLookups} lookup failures)`;
@@ -63,6 +97,54 @@ export default function Sidebar({
     setInput(EXAMPLES[key]);
   };
 
+  const handleSDFFile = async (file: File) => {
+    if (!file.name.match(/\.(sdf|sd)$/i)) {
+      setStatus({ msg: 'Please upload a .sdf or .sd file', type: 'error' });
+      return;
+    }
+    if (!isRDKitReady) {
+      setStatus({ msg: 'Waiting for RDKit...', type: 'info' });
+      return;
+    }
+    setIsLoading(true);
+    setStatus({ msg: 'Parsing SDF...', type: 'info' });
+    try {
+      const text = await file.text();
+      const lines = await parseSDFFile(text);
+      if (lines.length === 0) {
+        setStatus({ msg: 'No valid molecules found in SDF', type: 'error' });
+        return;
+      }
+      const { molecules: newMols, errors, failedLookups } = await parseAndAnalyze(lines.join('\n'));
+      setMolecules(newMols);
+      setCompareIndices([]);
+      setSelectedMolIdx(null);
+      setInput(lines.join('\n'));
+      let finalMsg = `Loaded ${newMols.length} molecules from ${file.name}`;
+      if (errors > 0 || failedLookups > 0) finalMsg += ` (${errors} errors, ${failedLookups} lookup failures)`;
+      setStatus({ msg: finalMsg, type: errors + failedLookups > 0 ? 'error' : 'success' });
+      onToast?.(`Loaded ${newMols.length} from SDF`);
+    } catch (e: unknown) {
+      setStatus({ msg: 'SDF parse error: ' + (e instanceof Error ? e.message : String(e)), type: 'error' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const onFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) handleSDFFile(file);
+    e.target.value = '';
+  };
+
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) handleSDFFile(file);
+  };
+
+  const onDragOver = (e: React.DragEvent) => e.preventDefault();
+
   return (
     <aside className="border-r border-white/5 p-5 overflow-y-auto max-h-none md:max-h-[calc(100vh-73px)] custom-scrollbar">
       <div className="text-[11px] uppercase tracking-[1.2px] text-[#9C9893] mb-2 font-semibold">
@@ -71,17 +153,36 @@ export default function Sidebar({
       <textarea
         value={input}
         onChange={(e) => setInput(e.target.value)}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
         className="w-full h-[140px] bg-[#22201F] border border-white/5 rounded-md text-[#E8E6E3] font-mono text-[13px] p-3 resize-y outline-none transition-colors focus:border-[#5F7367]"
-        placeholder="paste SMILES (one per line)..."
+        placeholder="paste SMILES (one per line) or drag SDF here..."
       />
-      <button
-        onClick={handleAnalyze}
-        disabled={isLoading || !input.trim() || !isRDKitReady}
-        className="w-full mt-3 bg-[#5F7367] text-white py-2.5 rounded-md text-[13px] font-semibold flex items-center justify-center gap-2 hover:bg-[#798F81] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-      >
-        {isLoading ? <span className="spinner-ring" /> : null}
-        {isLoading ? 'loading...' : (isRDKitReady ? 'Analyze Molecules' : 'Loading RDKit...')}
-      </button>
+      <div className="flex gap-2 mt-3">
+        <button
+          onClick={handleAnalyze}
+          disabled={isLoading || !input.trim() || !isRDKitReady}
+          className="flex-1 bg-[#5F7367] text-white py-2.5 rounded-md text-[13px] font-semibold flex items-center justify-center gap-2 hover:bg-[#798F81] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {isLoading ? <span className="spinner-ring" /> : null}
+          {isLoading ? 'loading...' : (isRDKitReady ? 'Analyze Molecules' : 'Loading RDKit...')}
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".sdf,.sd"
+          className="hidden"
+          onChange={onFileChange}
+        />
+        <button
+          type="button"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={!isRDKitReady || isLoading}
+          className="px-4 py-2.5 bg-[#2C2A28] border border-white/5 rounded-md text-[13px] font-medium text-[#E8E6E3] hover:border-[#5F7367] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          SDF
+        </button>
+      </div>
 
       {status.msg && (
         <div className={`mt-2 text-[11px] ${status.type === 'error' ? 'text-[#B05C56]' : status.type === 'success' ? 'text-[#6B8E6A]' : 'text-[#9C9893]'}`}>
@@ -166,7 +267,7 @@ export default function Sidebar({
                 <span key={fname} className={`px-2 py-0.5 rounded text-[10px] font-medium ${
                   res.pass ? 'bg-white/10 text-white' : 'bg-[#ef4444]/15 text-[#ef4444]'
                 }`}>
-                  {fname.slice(0,3)} {res.pass ? '✓' : '✗'}
+                  {fname.slice(0,3)} {res.pass ? 'pass' : 'fail'}
                 </span>
               ))}
             </div>
