@@ -19,7 +19,7 @@ const DEFAULT_AXES: ScatterAxes[] = [
 
 export default function ParetoView({ molecules }: { molecules: Molecule[] }) {
   const [axes, setAxes] = useState<ScatterAxes[]>(DEFAULT_AXES);
-  const [showAll, setShowAll] = useState(false);
+  const [showAll, setShowAll] = useState(true);
   const [activeFilters, setActiveFilters] = useState<Set<string>>(new Set(['lipinski']));
 
   const visibleAxes = showAll ? axes : axes.slice(0, 2);
@@ -174,8 +174,8 @@ function ScatterChart({ molecules, xKey, yKey, activeFilters }: { molecules: Mol
                 label: 'Pareto Front',
                 data: paretoMols,
                 type: 'line' as const,
-                borderColor: 'rgba(255,255,255,0.25)',
-                borderWidth: 1.5,
+                borderColor: 'rgba(20,184,166,0.6)',
+                borderWidth: 2,
                 borderDash: [6, 3],
                 pointRadius: 0,
                 fill: false,
@@ -191,7 +191,7 @@ function ScatterChart({ molecules, xKey, yKey, activeFilters }: { molecules: Mol
   const tooltipRef = useRef<HTMLDivElement>(null);
 
   return (
-    <div className="relative">
+    <div className="relative w-full h-full">
       <div
         ref={tooltipRef}
         id="pareto-tooltip"
@@ -248,12 +248,28 @@ function ScatterChart({ molecules, xKey, yKey, activeFilters }: { molecules: Mol
           x: {
             title: { display: true, text: xKey as string, color: '#8888a0' },
             grid: { color: 'rgba(42,42,58,0.5)' },
-            ticks: { color: '#8888a0' }
+            ticks: { color: '#8888a0' },
+            ...((() => {
+              const vals = molecules.map(m => m.props[xKey]);
+              if (vals.length === 0) return {};
+              const min = Math.min(...vals);
+              const max = Math.max(...vals);
+              const pad = (max - min) * 0.1 || 1;
+              return { min: min - pad, max: max + pad };
+            })()),
           },
           y: {
             title: { display: true, text: yKey as string, color: '#8888a0' },
             grid: { color: 'rgba(42,42,58,0.5)' },
-            ticks: { color: '#8888a0' }
+            ticks: { color: '#8888a0' },
+            ...((() => {
+              const vals = molecules.map(m => m.props[yKey]);
+              if (vals.length === 0) return {};
+              const min = Math.min(...vals);
+              const max = Math.max(...vals);
+              const pad = (max - min) * 0.1 || 1;
+              return { min: min - pad, max: max + pad };
+            })()),
           }
         }
       }} 

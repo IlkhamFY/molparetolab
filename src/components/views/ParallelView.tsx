@@ -72,7 +72,7 @@ export default function ParallelView({ molecules }: { molecules: Molecule[] }) {
         return true;
       }
 
-      ctx.fillStyle = '#12121a';
+      ctx.fillStyle = '#1A1918';
       ctx.fillRect(0, 0, W, H);
 
       axes.forEach((k, i) => {
@@ -275,7 +275,7 @@ export default function ParallelView({ molecules }: { molecules: Molecule[] }) {
         </div>
       </div>
 
-      <div ref={containerRef} className="w-full h-[500px] relative rounded-md overflow-hidden bg-[#12121a]">
+      <div ref={containerRef} className="w-full h-[500px] relative rounded-md overflow-hidden bg-[#1A1918]">
         <canvas ref={canvasRef} className="block w-full h-full" />
       </div>
     </div>

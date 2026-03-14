@@ -36,7 +36,7 @@ export default function EggView({ molecules }: { molecules: Molecule[] }) {
     }
 
     // Background
-    ctx.fillStyle = '#12121a';
+    ctx.fillStyle = '#1A1918';
     ctx.fillRect(0, 0, W, H);
 
     // Grid
@@ -97,6 +97,35 @@ export default function EggView({ molecules }: { molecules: Molecule[] }) {
       return ((logp - cx) ** 2) / (rx ** 2) + ((tpsa - cy) ** 2) / (ry ** 2) <= 1;
     }
 
+    // Axis labels
+    ctx.save();
+    ctx.font = '13px Inter, sans-serif';
+    ctx.fillStyle = '#8888a0';
+    ctx.textAlign = 'center';
+    ctx.fillText('WLOGP', padLeft + plotW / 2, H - 8);
+    ctx.save();
+    ctx.translate(16, padTop + plotH / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.fillText('TPSA', 0, 0);
+    ctx.restore();
+    ctx.restore();
+
+    // Tick labels
+    ctx.font = '10px Inter, sans-serif';
+    ctx.fillStyle = '#8888a0';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    for (let x = -2; x <= 7; x++) {
+      const [px] = toPixel(x, 0);
+      ctx.fillText(String(x), px, H - padBottom + 4);
+    }
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    for (let y = 0; y <= 200; y += 40) {
+      const [, py] = toPixel(0, y);
+      ctx.fillText(String(y), padLeft - 6, py);
+    }
+
     molecules.forEach((m) => {
       const logp = m.props.LogP;
       const tpsa = m.props.TPSA;
@@ -149,7 +178,7 @@ export default function EggView({ molecules }: { molecules: Molecule[] }) {
         </div>
       </div>
 
-      <div ref={containerRef} className="w-full h-[500px] relative rounded-md overflow-hidden bg-[#12121a]">
+      <div ref={containerRef} className="w-full h-[500px] relative rounded-md overflow-hidden bg-[#1A1918]">
         <canvas ref={canvasRef} className="block w-full h-full" />
       </div>
 

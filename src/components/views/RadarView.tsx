@@ -25,7 +25,7 @@ export default function RadarView({ molecules, selectedMolIdx }: { molecules: Mo
   labels.forEach(k => {
     const propDef = PROPERTIES.find(p => p.key === k);
     if (propDef && propDef.lipinski) {
-      maxVals[k] = propDef.lipinski.max * 1.5;
+      maxVals[k] = propDef.lipinski.max;
     } else {
       maxVals[k] = Math.max(...molecules.map(m => m.props[k as keyof Molecule['props']] as number), 1);
     }
@@ -39,9 +39,10 @@ export default function RadarView({ molecules, selectedMolIdx }: { molecules: Mo
       label: m.name,
       data: labels.map(k => Math.min((m.props[k as keyof Molecule['props']] as number) / maxVals[k], 1.5)),
       borderColor: color,
-      backgroundColor: color + '20', // Add alpha
-      borderWidth: isSelected ? 3 : 1.5,
-      pointRadius: isSelected ? 4 : 2,
+      backgroundColor: color + '35', // ~20% opacity fill
+      borderWidth: isSelected ? 3 : 2,
+      pointRadius: isSelected ? 5 : 3,
+      pointBackgroundColor: color,
     };
   });
 
@@ -52,14 +53,14 @@ export default function RadarView({ molecules, selectedMolIdx }: { molecules: Mo
         <p className="text-[12px] text-[#9C9893]">normalized to Lipinski limits (1.0 = threshold)</p>
       </div>
 
-      <div className="w-full h-[500px]">
-        <Radar 
+      <div className="w-full h-[420px]">
+        <Radar
           data={{ labels, datasets }}
           options={{
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-              legend: { labels: { color: '#8888a0', font: { size: 11 } } },
+              legend: { display: false },
               tooltip: {
                 callbacks: {
                   label: (ctx) => {
@@ -76,13 +77,22 @@ export default function RadarView({ molecules, selectedMolIdx }: { molecules: Mo
                 grid: { color: 'rgba(42,42,58,0.5)' },
                 angleLines: { color: 'rgba(42,42,58,0.5)' },
                 pointLabels: { color: '#e0e0e8', font: { size: 12 } },
-                ticks: { color: '#8888a0', backdropColor: 'transparent', stepSize: 0.5 },
+                ticks: { color: '#8888a0', backdropColor: 'transparent', stepSize: 0.25, maxTicksLimit: 5 },
                 suggestedMin: 0,
-                suggestedMax: 1.2,
+                suggestedMax: 1.0,
               }
             }
           }}
         />
+      </div>
+
+      <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1">
+        {datasets.map((ds, i) => (
+          <div key={i} className="flex items-center gap-1.5 text-[11px] text-[#9C9893]">
+            <span className="w-2.5 h-2.5 rounded-sm flex-shrink-0" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
+            {ds.label}
+          </div>
+        ))}
       </div>
     </div>
   );
