@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { GitCompareArrows, FlaskConical, MessageSquareText } from 'lucide-react';
 import type { Molecule } from '../utils/types';
 import ParetoView from './views/ParetoView';
 import ScoringView from './views/ScoringView';
@@ -25,12 +26,12 @@ export default function Content({ molecules, compareIndices, selectedMolIdx, set
           </p>
           <div className="grid grid-cols-1 gap-3 text-left mb-8">
             {[
-              { icon: '⚖️', title: 'Pareto ranking', desc: 'Find non-dominated molecules across MW, LogP, HBD, HBA, TPSA, RotBonds' },
-              { icon: '🧪', title: 'Drug-likeness filters', desc: 'Lipinski Ro5, Veber, Ghose, Lead-like — with pass/fail overlay on every chart' },
-              { icon: '🤖', title: 'AI Copilot', desc: 'Ask questions about your molecules with context-aware AI (BYOK)' },
+              { Icon: GitCompareArrows, title: 'Pareto ranking', desc: 'Find non-dominated molecules across MW, LogP, HBD, HBA, TPSA, RotBonds' },
+              { Icon: FlaskConical, title: 'Drug-likeness filters', desc: 'Lipinski Ro5, Veber, Ghose, Lead-like with pass/fail overlay on every chart' },
+              { Icon: MessageSquareText, title: 'AI Copilot', desc: 'Ask questions about your molecules with context-aware AI (BYOK)' },
             ].map(f => (
               <div key={f.title} className="flex gap-3 p-3 bg-[#22201F] border border-white/5 rounded-md">
-                <span className="text-lg">{f.icon}</span>
+                <f.Icon size={18} className="text-[#5F7367] mt-0.5 shrink-0" strokeWidth={1.5} />
                 <div>
                   <div className="text-[13px] font-medium text-[#E8E6E3]">{f.title}</div>
                   <div className="text-[11px] text-[#9C9893] mt-0.5">{f.desc}</div>
