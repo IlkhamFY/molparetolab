@@ -150,9 +150,9 @@ function DominanceMatrix({ molecules }: { molecules: Molecule[] }) {
           style={{ gridTemplateColumns: `auto repeat(${molecules.length}, 56px)`, width: 'max-content' }}
         >
           {/* Top Header Row */}
-          <div className="bg-[#1a1a24] p-2 flex items-center justify-end font-semibold text-[#8888a0]"></div>
-          {molecules.map(m => (
-            <div key={'h_'+m.smiles} className="bg-[#1a1a24] text-[#8888a0] flex items-center justify-center w-[56px] h-10 px-1 truncate text-center text-[10px]" title={m.name}>
+          <div key="corner" className="bg-[#1a1a24] p-2 flex items-center justify-end font-semibold text-[#8888a0]"></div>
+          {molecules.map((m, idx) => (
+            <div key={`h_${idx}`} className="bg-[#1a1a24] text-[#8888a0] flex items-center justify-center w-[56px] h-10 px-1 truncate text-center text-[10px]" title={m.name}>
               {m.name}
             </div>
           ))}
@@ -161,17 +161,17 @@ function DominanceMatrix({ molecules }: { molecules: Molecule[] }) {
           {molecules.map((rowMol, i) => (
             <div key={`row_${i}`} className="contents">
               {/* Row Header */}
-              <div className="bg-[#1a1a24] text-[#8888a0] p-2 flex items-center justify-end truncate max-w-[120px]" title={rowMol.name}>
+              <div key={`rh_${i}`} className="bg-[#1a1a24] text-[#8888a0] p-2 flex items-center justify-end truncate max-w-[120px]" title={rowMol.name}>
                 {rowMol.name.slice(0, 10)}
               </div>
-              
+
               {/* Row Cells */}
               {molecules.map((_colMol, j) => {
                 let cellClass = 'bg-[#12121a] text-[#555] w-[56px]';
                 let cellText = '~';
 
                 if (i === j) {
-                  cellClass = 'bg-[#2a2a3a] text-[#888 w-[56px]';
+                  cellClass = 'bg-[#2a2a3a] text-[#888] w-[56px]';
                   cellText = '-';
                 } else if (rowMol.dominates?.includes(j)) {
                   cellClass = 'bg-[#22c55e]/20 text-[#22c55e] font-bold w-[56px]';

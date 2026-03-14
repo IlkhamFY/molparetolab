@@ -93,6 +93,38 @@ export default function EggView({ molecules }: { molecules: Molecule[] }) {
     const [ylx, yly] = toPixel(yolkCx, yolkCy);
     ctx.fillText('BBB Penetrant (Yolk)', ylx, yly - 10);
 
+    // Lipinski threshold lines
+    ctx.save();
+    ctx.setLineDash([6, 4]);
+    ctx.lineWidth = 1;
+    // TPSA = 140 horizontal line
+    const [tpsaLx1, tpsaLy] = toPixel(xMin, 140);
+    const [tpsaLx2] = toPixel(xMax, 140);
+    ctx.strokeStyle = 'rgba(239,68,68,0.45)';
+    ctx.beginPath();
+    ctx.moveTo(tpsaLx1, tpsaLy);
+    ctx.lineTo(tpsaLx2, tpsaLy);
+    ctx.stroke();
+    ctx.font = '10px Inter, sans-serif';
+    ctx.fillStyle = 'rgba(239,68,68,0.6)';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'bottom';
+    ctx.fillText('TPSA=140', tpsaLx1 + 4, tpsaLy - 2);
+
+    // LogP = 5 vertical line
+    const [logpLx, logpLy1] = toPixel(5, yMax);
+    const [, logpLy2] = toPixel(5, yMin);
+    ctx.strokeStyle = 'rgba(239,68,68,0.45)';
+    ctx.beginPath();
+    ctx.moveTo(logpLx, logpLy1);
+    ctx.lineTo(logpLx, logpLy2);
+    ctx.stroke();
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('LogP=5', logpLx + 3, logpLy1 + 2);
+    ctx.setLineDash([]);
+    ctx.restore();
+
     function insideEllipse(logp: number, tpsa: number, cx: number, cy: number, rx: number, ry: number) {
       return ((logp - cx) ** 2) / (rx ** 2) + ((tpsa - cy) ** 2) / (ry ** 2) <= 1;
     }

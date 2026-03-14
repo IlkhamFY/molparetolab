@@ -59,6 +59,7 @@ export default function RadarView({ molecules, selectedMolIdx }: { molecules: Mo
           options={{
             responsive: true,
             maintainAspectRatio: false,
+            animation: { duration: 300 },
             plugins: {
               legend: { display: false },
               tooltip: {
@@ -74,10 +75,10 @@ export default function RadarView({ molecules, selectedMolIdx }: { molecules: Mo
             },
             scales: {
               r: {
-                grid: { color: 'rgba(42,42,58,0.5)' },
-                angleLines: { color: 'rgba(42,42,58,0.5)' },
-                pointLabels: { color: '#e0e0e8', font: { size: 12 } },
-                ticks: { color: '#8888a0', backdropColor: 'transparent', stepSize: 0.25, maxTicksLimit: 5 },
+                grid: { color: 'rgba(80,80,100,0.4)' },
+                angleLines: { color: 'rgba(80,80,100,0.4)' },
+                pointLabels: { color: '#e0e0e8', font: { size: 13 } },
+                ticks: { color: '#8888a0', backdropColor: 'rgba(26,25,24,0.75)', stepSize: 0.25, maxTicksLimit: 5, display: true },
                 suggestedMin: 0,
                 suggestedMax: 1.0,
               }

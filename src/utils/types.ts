@@ -93,14 +93,14 @@ c1ccc2c(c1)cc1ccc3cccc4ccc2c1c34 pyrene
 CC12CCC3C(C1CCC2O)CCC1=CC(=O)CCC13C testosterone
 OC(=O)c1cc(O)c(O)c(O)c1 gallic_acid`,
 
-  lipinski: `C1CCCCC1 cyclohexane_MW84
-CCCCCCCCCCCCCCCCCCCC icosane_MW283
-c1ccc(-c2ccc(-c3ccc(-c4ccccc4)cc3)cc2)cc1 quaterphenyl_MW306
-OC(=O)CCCCCCCCCCCCCCC palmitic_acid_MW256
-NCCCCCCCCCCCCCCCCCCN diaminooctadecane
-CC(C)(C)c1ccc(cc1)C(O)(c1ccc(cc1)C(C)(C)C)c1ccc(cc1)C(C)(C)C MW_violator
-O=C(O)c1ccccc1O salicylic_acid_MW138
-c1ccccc1 benzene_MW78`,
+  lipinski: `CC(=O)Oc1ccccc1C(=O)O aspirin
+CC(C)Cc1ccc(cc1)C(C)C(=O)O ibuprofen
+CC(=O)Nc1ccc(O)cc1 acetaminophen
+CCCCCCCCCCCCCCCCCCCCCCCCCCCCCC triacontane
+CC(C)(C)c1ccc(cc1)C(O)(c1ccc(cc1)C(C)(C)C)c1ccc(cc1)C(C)(C)C big_lipophilic
+CCCCCCCCCCCCCCCCCCCCOC(=O)c1cc(O)c(O)c(O)c1 fatty_gallate
+O=C(O)c1ccccc1O salicylic_acid
+c1ccccc1 benzene`,
 
   diverse: `C methane
 CCO ethanol

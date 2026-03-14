@@ -48,8 +48,9 @@ export default function SimilarityMatrixView({ molecules }: { molecules: Molecul
     const padRight = 20;
     const cellW = (W - padLeft - padRight) / n;
     const cellH = (H - padTop - padBottom) / n;
-    const size = Math.min(cellW, cellH, 56);
-    const offsetX = padLeft;
+    const size = Math.max(48, Math.min(cellW, cellH, 56));
+    const totalMatrixW = n * size;
+    const offsetX = Math.max(padLeft, (W - totalMatrixW) / 2);
     const offsetY = padTop;
     ctx.fillStyle = '#1A1918';
     ctx.fillRect(0, 0, W, H);
@@ -57,8 +58,9 @@ export default function SimilarityMatrixView({ molecules }: { molecules: Molecul
     for (let i = 0; i < n; i++) {
       for (let j = 0; j < n; j++) {
         const t = matrix[i][j];
+        const isDiagonal = i === j;
         const isHover = hoverCell?.i === i && hoverCell?.j === j;
-        ctx.fillStyle = lerpColor(t);
+        ctx.fillStyle = isDiagonal ? 'rgb(168, 85, 247)' : lerpColor(t);
         ctx.globalAlpha = isHover ? 1 : 0.85;
         const x = offsetX + j * size;
         const y = offsetY + i * size;
@@ -109,7 +111,7 @@ export default function SimilarityMatrixView({ molecules }: { molecules: Molecul
         }
       }
     }
-  }, [matrix, n, labels, hoverCell]);
+  }, [matrix, n, labels, hoverCell, molecules.length]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
     if (!containerRef.current || n === 0) return;
@@ -120,8 +122,10 @@ export default function SimilarityMatrixView({ molecules }: { molecules: Molecul
     const padRight = 20;
     const cellW = (rect.width - padLeft - padRight) / n;
     const cellH = (rect.height - padTop - padBottom) / n;
-    const size = Math.min(cellW, cellH, 56);
-    const offsetX = padLeft;
+    const size = Math.max(48, Math.min(cellW, cellH, 56));
+    const totalMatrixW = n * size;
+    const availableW = rect.width - padLeft - padRight;
+    const offsetX = padLeft + Math.max(0, (availableW - totalMatrixW) / 2);
     const offsetY = padTop;
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -144,7 +148,7 @@ export default function SimilarityMatrixView({ molecules }: { molecules: Molecul
           Diversity score: <span className="font-mono text-[#E8E6E3]">{(diversity * 100).toFixed(1)}%</span> (higher = more diverse)
         </span>
       </div>
-      <div ref={containerRef} className="w-full h-[400px] relative">
+      <div ref={containerRef} className="w-full" style={{ height: `${Math.min(molecules.length * 62 + 110, 580)}px`, position: 'relative' }}>
         <canvas
           ref={canvasRef}
           className="w-full h-full"
