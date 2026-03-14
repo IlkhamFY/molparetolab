@@ -7,8 +7,10 @@ import CompareView from './views/CompareView';
 import RadarView from './views/RadarView';
 import TableView from './views/TableView';
 import EggView from './views/EggView';
+import SimilarityMatrixView from './views/SimilarityMatrixView';
+import ActivityCliffsView from './views/ActivityCliffsView';
 
-export default function Content({ molecules, compareIndices, selectedMolIdx }: { molecules: Molecule[], compareIndices: number[], selectedMolIdx: number | null }) {
+export default function Content({ molecules, compareIndices, selectedMolIdx, exportContainerRef, setCompareIndices }: { molecules: Molecule[]; compareIndices: number[]; selectedMolIdx: number | null; exportContainerRef?: React.RefObject<HTMLDivElement | null>; setCompareIndices?: React.Dispatch<React.SetStateAction<number[]>> }) {
   const [activeTab, setActiveTab] = useState('pareto');
 
   if (molecules.length === 0) {
@@ -50,6 +52,8 @@ export default function Content({ molecules, compareIndices, selectedMolIdx }: {
           { id: 'radar', label: 'Radar' },
           { id: 'scoring', label: 'Scoring' },
           { id: 'parallel', label: 'Parallel' },
+          { id: 'similarity', label: 'Similarity' },
+          { id: 'cliffs', label: 'Activity cliffs' },
           { id: 'compare', label: 'Compare' },
           { id: 'table', label: 'Table & Dominance' },
         ].map(tab => (
@@ -68,12 +72,14 @@ export default function Content({ molecules, compareIndices, selectedMolIdx }: {
       </div>
 
       {/* View Content */}
-      <div className="view-container">
+      <div className="view-container" ref={exportContainerRef}>
         {activeTab === 'pareto' && <ParetoView molecules={molecules} />}
         {activeTab === 'egg' && <EggView molecules={molecules} />}
         {activeTab === 'radar' && <RadarView molecules={molecules} selectedMolIdx={selectedMolIdx} />}
         {activeTab === 'scoring' && <ScoringView molecules={molecules} />}
         {activeTab === 'parallel' && <ParallelView molecules={molecules} />}
+        {activeTab === 'similarity' && <SimilarityMatrixView molecules={molecules} />}
+        {activeTab === 'cliffs' && <ActivityCliffsView molecules={molecules} onComparePair={setCompareIndices ? (i, j) => { setCompareIndices([i, j]); setActiveTab('compare'); } : undefined} />}
         {activeTab === 'compare' && <CompareView molecules={molecules} compareIndices={compareIndices} />}
         {activeTab === 'table' && <TableView molecules={molecules} selectedMolIdx={selectedMolIdx} />}
       </div>

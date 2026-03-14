@@ -1,73 +1,53 @@
-# React + TypeScript + Vite
+# MolParetoLab
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+**Interactive multi-objective Pareto analysis of drug-like molecules in the browser.**
 
-Currently, two official plugins are available:
+MolParetoLab is a client-side web app for comparing and ranking molecules across multiple drug-likeness properties. Paste SMILES, upload an SDF, or open a shared link — all computation runs in your browser via RDKit.js (WebAssembly). No backend, no install, no data leaves your machine.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Live app:** [https://molparetolab.ilkham.com/](https://molparetolab.ilkham.com/) · [GitHub Pages](https://ilkhamfy.github.io/molparetolab/)
+- **Repo:** [https://github.com/IlkhamFY/molparetolab](https://github.com/IlkhamFY/molparetolab)
 
-## React Compiler
+## Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Pareto ranking** — Non-dominated sorting across MW, LogP, HBD, HBA, TPSA, RotBonds
+- **Drug-likeness filters** — Lipinski Ro5, Veber, Ghose with pass/fail and overlays on scatter plots
+- **9 views** — Pareto scatter (axis selector), BOILED-Egg (WLogP × TPSA), Radar, Scoring (weighted Chebyshev profiles), Parallel coordinates, **Similarity matrix**, **Activity cliffs**, Compare (head-to-head), Table & Dominance matrix
+- **Share URL** — Encode your molecule set in the link; anyone opening it sees the same analysis
+- **Export** — CSV (properties + filters + Pareto), PNG figure (current view)
+- **SDF upload** — Drag-and-drop or file picker; client-side parse then full analysis
+- **ChEMBL** — Fetch by ChEMBL IDs (comma/semicolon list), then analyze
+- **Batch** — Chunked analysis with progress for 30+ molecules; “Resolving names…” and “Analyzing…” with progress bar
+- **Examples** — Drug-like set, Lipinski edge cases, diverse chemical space, kinase inhibitors
+- **PubChem names** — Paste compound names; app resolves to SMILES when not valid SMILES
+- **Tooltips** — Hover on Pareto scatter or parallel coordinates for structure preview + key props
+- **AI Copilot** — “Summarize my set” and “Why is [name] Pareto-optimal?” (canned answers)
 
-## Expanding the ESLint configuration
+## Run locally
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Open [http://localhost:5173](http://localhost:5173). Build for production:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run build
 ```
+
+## Tech stack
+
+- **React 19** + TypeScript + Vite 8
+- **RDKit.js** (WASM) — parsing, descriptors, SVG, Morgan fingerprints
+- **Chart.js 4** + react-chartjs-2 — scatter, radar, bar
+- **Tailwind CSS** — dark theme, zinc palette
+- **LZ-String** — compressed shareable URLs
+
+## Roadmap
+
+- **Molecule editor** — Draw or edit structures in-browser (planned; depends on RDKit.js sketcher availability).
+- Batch mode for 500+ molecules (Web Workers), JCIM application note.
+
+## License & author
+
+Open source. Built by [Ilkham Yabbarov](https://ilkham.com).

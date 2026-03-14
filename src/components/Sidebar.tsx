@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import type { Molecule } from '../utils/types';
 import { EXAMPLES } from '../utils/types';
-import { initRDKitCache, parseAndAnalyze, parseSDFFile } from '../utils/chem';
+import { initRDKitCache, parseAndAnalyze, parseAndAnalyzeChunked, parseSDFFile, fetchChEMBLBatch } from '../utils/chem';
 
 interface SidebarProps {
   molecules: Molecule[];
@@ -30,7 +30,12 @@ export default function Sidebar({
   const [isLoading, setIsLoading] = useState(false);
   const [isRDKitReady, setIsRDKitReady] = useState(false);
   const [status, setStatus] = useState<{msg: string, type: 'success'|'error'|'info'}>({ msg: 'loading rdkit...', type: 'info' });
+  const [progress, setProgress] = useState<{ done: number; total: number; phase?: 'resolve' | 'analyze' } | null>(null);
+  const [chemblInput, setChemblInput] = useState('');
+  const [chemblOpen, setChemblOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const CHUNK_THRESHOLD = 30;
 
   useEffect(() => {
     initRDKitCache()
@@ -71,13 +76,27 @@ export default function Sidebar({
   const handleAnalyze = async () => {
     if (!input.trim() || !isRDKitReady) return;
     setIsLoading(true);
-    setStatus({ msg: 'Crunching descriptors...', type: 'info' });
-    
+    setProgress(null);
+    const lineCount = input.trim().split('\n').filter((l) => l.trim()).length;
+    const useChunked = lineCount >= CHUNK_THRESHOLD;
+    setStatus({ msg: useChunked ? `Starting… 0/${lineCount}` : 'Crunching descriptors...', type: 'info' });
+
     try {
-      const { molecules: newMols, errors, failedLookups } = await parseAndAnalyze(input);
+      const result = useChunked
+        ? await parseAndAnalyzeChunked(input, {
+            chunkSize: 25,
+            onProgress: (done, total, phase) => {
+              setProgress({ done, total, phase });
+              const msg = phase === 'resolve' ? `Resolving names ${done}/${total}...` : `Analyzing ${done}/${total}...`;
+              setStatus({ msg, type: 'info' });
+            },
+          })
+        : await parseAndAnalyze(input);
+      const { molecules: newMols, errors, failedLookups } = result;
       setMolecules(newMols);
       setCompareIndices([]);
       setSelectedMolIdx(null);
+      setProgress(null);
 
       let finalMsg = `${newMols.length} molecules analyzed`;
       if (errors > 0 || failedLookups > 0) {
@@ -86,8 +105,9 @@ export default function Sidebar({
       } else {
         setStatus({ msg: finalMsg, type: 'success' });
       }
-    } catch (e: any) {
-      setStatus({ msg: 'analysis error: ' + e.message, type: 'error' });
+    } catch (e: unknown) {
+      setProgress(null);
+      setStatus({ msg: 'analysis error: ' + (e instanceof Error ? e.message : String(e)), type: 'error' });
     } finally {
       setIsLoading(false);
     }
@@ -138,12 +158,53 @@ export default function Sidebar({
   };
 
   const onDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    const file = e.dataTransfer.files[0];
-    if (file) handleSDFFile(file);
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      e.preventDefault();
+      handleSDFFile(file);
+    }
   };
 
-  const onDragOver = (e: React.DragEvent) => e.preventDefault();
+  const onDragOver = (e: React.DragEvent) => {
+    const hasFiles = e.dataTransfer.types?.includes('Files') ?? false;
+    if (hasFiles) e.preventDefault();
+  };
+
+  const handleFetchChEMBL = async () => {
+    const ids = chemblInput.split(/[\s,;]+/).filter((s) => s.trim().toUpperCase().startsWith('CHEMBL'));
+    if (ids.length === 0) {
+      setStatus({ msg: 'Enter ChEMBL IDs (e.g. CHEMBL1, CHEMBL2)', type: 'error' });
+      return;
+    }
+    if (!isRDKitReady) return;
+    setIsLoading(true);
+    setProgress({ done: 0, total: ids.length });
+    setStatus({ msg: `Fetching ChEMBL ${0}/${ids.length}...`, type: 'info' });
+    try {
+      const lines = await fetchChEMBLBatch(ids, (done, total) => {
+        setProgress({ done, total });
+        setStatus({ msg: `Fetching ChEMBL ${done}/${total}...`, type: 'info' });
+      });
+      setProgress(null);
+      if (lines.length === 0) {
+        setStatus({ msg: 'No molecules found for these ChEMBL IDs', type: 'error' });
+        return;
+      }
+      setInput(lines.join('\n'));
+      const { molecules: newMols, errors, failedLookups } = await parseAndAnalyze(lines.join('\n'));
+      setMolecules(newMols);
+      setCompareIndices([]);
+      setSelectedMolIdx(null);
+      setStatus({ msg: `Loaded ${newMols.length} from ChEMBL${errors + failedLookups > 0 ? ` (${errors} errors, ${failedLookups} not found)` : ''}`, type: errors + failedLookups > 0 ? 'error' : 'success' });
+      setChemblOpen(false);
+      setChemblInput('');
+    } catch (e: unknown) {
+      setProgress(null);
+      setStatus({ msg: 'ChEMBL fetch error: ' + (e instanceof Error ? e.message : String(e)), type: 'error' });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <aside className="border-r border-white/5 p-5 overflow-y-auto max-h-none md:max-h-[calc(100vh-73px)] custom-scrollbar">
@@ -189,6 +250,14 @@ export default function Sidebar({
           {status.msg}
         </div>
       )}
+      {progress && (
+        <div className="mt-1.5 h-1 bg-[#1A1918] rounded-full overflow-hidden">
+          <div
+            className="h-full bg-[#5F7367] transition-all duration-300"
+            style={{ width: `${(progress.done / progress.total) * 100}%` }}
+          />
+        </div>
+      )}
 
       <div className="mt-4">
         <div className="text-[11px] uppercase tracking-[1.2px] text-[#9C9893] mb-2 font-semibold">
@@ -208,6 +277,35 @@ export default function Sidebar({
             <span className="text-[#E8E6E3] font-medium">{name}</span>
           </button>
         ))}
+      </div>
+
+      <div className="mt-4">
+        <button
+          type="button"
+          onClick={() => setChemblOpen(!chemblOpen)}
+          className="w-full text-left p-2 bg-[#22201F] border border-white/5 rounded-md text-[#9C9893] text-[12px] transition-colors hover:border-[#5F7367] hover:text-[#E8E6E3]"
+        >
+          <span className="text-[#E8E6E3] font-medium">Fetch by ChEMBL IDs</span>
+        </button>
+        {chemblOpen && (
+          <div className="mt-2 p-2 bg-[#1A1918] border border-white/5 rounded-md">
+            <input
+              type="text"
+              value={chemblInput}
+              onChange={(e) => setChemblInput(e.target.value)}
+              placeholder="CHEMBL1, CHEMBL2, ..."
+              className="w-full bg-[#22201F] border border-white/5 rounded px-2 py-1.5 text-[12px] text-[#E8E6E3] placeholder-[#9C9893] outline-none focus:border-[#5F7367]"
+            />
+            <button
+              type="button"
+              onClick={handleFetchChEMBL}
+              disabled={!isRDKitReady || isLoading}
+              className="mt-2 w-full py-1.5 bg-[#5F7367] text-white text-[12px] font-medium rounded hover:bg-[#798F81] disabled:opacity-40"
+            >
+              Fetch and analyze
+            </button>
+          </div>
+        )}
       </div>
 
       <div className="mt-6 flex flex-col gap-2 pb-20">

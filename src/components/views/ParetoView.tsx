@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { Scatter } from 'react-chartjs-2';
 import type { Molecule } from '../../utils/types';
 import { DRUG_FILTERS } from '../../utils/types';
@@ -123,18 +123,19 @@ export default function ParetoView({ molecules }: { molecules: Molecule[] }) {
 
 function ScatterChart({ molecules, xKey, yKey }: { molecules: Molecule[], xKey: keyof Molecule['props'], yKey: keyof Molecule['props'] }) {
   const data = useMemo(() => {
-    const passData: any[] = [];
-    const failData: any[] = [];
-    
-    molecules.forEach((m) => {
-      const pt = { x: m.props[xKey], y: m.props[yKey], label: m.name };
-      if (m.filters.lipinski?.pass) passData.push(pt); 
+    const passData: { x: number; y: number; label: string; molIndex: number }[] = [];
+    const failData: { x: number; y: number; label: string; molIndex: number }[] = [];
+
+    molecules.forEach((m, idx) => {
+      const pt = { x: m.props[xKey], y: m.props[yKey], label: m.name, molIndex: idx };
+      if (m.filters.lipinski?.pass) passData.push(pt);
       else failData.push(pt);
     });
 
-    const paretoMols = molecules.filter(m => m.paretoRank === 1)
-      .map(m => ({ x: m.props[xKey], y: m.props[yKey], label: m.name }))
-      .sort((a: any, b: any) => a.x - b.x);
+    const paretoMols = molecules
+      .filter((m) => m.paretoRank === 1)
+      .map((m) => ({ x: m.props[xKey], y: m.props[yKey], label: m.name, molIndex: molecules.indexOf(m) }))
+      .sort((a: { x: number }, b: { x: number }) => a.x - b.x);
 
     return {
       datasets: [
@@ -156,36 +157,82 @@ function ScatterChart({ molecules, xKey, yKey }: { molecules: Molecule[], xKey: 
           pointHoverRadius: 8,
           pointStyle: 'triangle' as const,
         },
-        ...(paretoMols.length >= 2 ? [{
-          label: 'Pareto Front',
-          data: paretoMols,
-          type: 'line' as const,
-          borderColor: 'rgba(255,255,255,0.25)',
-          borderWidth: 1.5,
-          borderDash: [6, 3],
-          pointRadius: 0,
-          fill: false,
-          tension: 0,
-          order: -1,
-        }] : [])
-      ]
+        ...(paretoMols.length >= 2
+          ? [
+              {
+                label: 'Pareto Front',
+                data: paretoMols,
+                type: 'line' as const,
+                borderColor: 'rgba(255,255,255,0.25)',
+                borderWidth: 1.5,
+                borderDash: [6, 3],
+                pointRadius: 0,
+                fill: false,
+                tension: 0,
+                order: -1,
+              },
+            ]
+          : []),
+      ],
     };
   }, [molecules, xKey, yKey]);
 
+  const tooltipRef = useRef<HTMLDivElement>(null);
+
   return (
-    <Scatter 
-      data={data as any} 
-      options={{
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { display: false },
-          tooltip: {
-            callbacks: {
-              label: (ctx: any) => ctx.raw.label || ''
-            }
-          }
-        },
+    <div className="relative">
+      <div
+        ref={tooltipRef}
+        id="pareto-tooltip"
+        className="absolute z-10 pointer-events-none hidden md:block px-3 py-2 bg-[#1A1918] border border-white/10 rounded-lg shadow-xl text-left max-w-[220px]"
+        style={{ opacity: 0 }}
+      />
+      <Scatter
+        data={data as any}
+        options={{
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              enabled: false,
+              external(context: unknown) {
+                const ctx = context as { tooltip: { opacity: number; caretX?: number; caretY?: number; dataPoints?: Array<{ raw?: { label?: string; molIndex?: number } }> }; chart: { canvas: HTMLCanvasElement } };
+                const el = tooltipRef.current;
+                if (!el) return;
+                if (ctx.tooltip.opacity === 0) {
+                  el.style.opacity = '0';
+                  el.style.visibility = 'hidden';
+                  return;
+                }
+                const dp = ctx.tooltip.dataPoints?.[0];
+                const raw = dp?.raw as { label?: string; molIndex?: number } | undefined;
+                const molIndex = raw?.molIndex ?? -1;
+                const m = molIndex >= 0 && molIndex < molecules.length ? molecules[molIndex] : null;
+                const { offsetLeft: posX, offsetTop: posY } = ctx.chart.canvas;
+                const caretX = ctx.tooltip.caretX ?? 0;
+                const caretY = ctx.tooltip.caretY ?? 0;
+                if (m) {
+                  const svgDataUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(m.svg)));
+                  el.innerHTML = `
+                    <div class="text-[12px]">
+                      <div class="font-semibold text-white mb-1">${(m.name || '').replace(/</g, '&lt;')}</div>
+                      <div class="text-[#9C9893] mb-2">${xKey}: ${m.props[xKey].toFixed(2)} · ${yKey}: ${m.props[yKey].toFixed(2)}</div>
+                      <img src="${svgDataUrl}" alt="" class="w-24 h-[72px] object-contain bg-[#09090b] rounded" />
+                    </div>
+                  `;
+                  el.style.left = posX + caretX + 10 + 'px';
+                  el.style.top = posY + caretY - 10 + 'px';
+                } else {
+                  el.innerHTML = `<div class="text-[12px] text-[#E8E6E3]">${(raw?.label || '').replace(/</g, '&lt;')}</div>`;
+                  el.style.left = posX + caretX + 10 + 'px';
+                  el.style.top = posY + caretY - 10 + 'px';
+                }
+                el.style.visibility = 'visible';
+                el.style.opacity = '1';
+              },
+            },
+          },
         scales: {
           x: {
             title: { display: true, text: xKey as string, color: '#8888a0' },
@@ -200,5 +247,6 @@ function ScatterChart({ molecules, xKey, yKey }: { molecules: Molecule[], xKey: 
         }
       }} 
     />
+    </div>
   );
 }

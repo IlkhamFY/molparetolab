@@ -1,10 +1,19 @@
 import { useEffect, useRef } from 'react';
 import type { Molecule } from '../../utils/types';
 
+function distToSegment(px: number, py: number, x1: number, y1: number, x2: number, y2: number): number {
+  const dx = x2 - x1, dy = y2 - y1;
+  const len = Math.hypot(dx, dy) || 1e-6;
+  const t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / (len * len)));
+  const nx = x1 + t * dx, ny = y1 + t * dy;
+  return Math.hypot(px - nx, py - ny);
+}
+
 export default function ParallelView({ molecules }: { molecules: Molecule[] }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const pcBrushesRef = useRef<Record<string, [number, number]>>({});
+  const apiRef = useRef<{ axisX: (i: number) => number; valToY: (key: string, val: number) => number; axes: string[] } | null>(null);
 
   useEffect(() => {
     if (!canvasRef.current || !containerRef.current) return;
@@ -140,6 +149,7 @@ export default function ParallelView({ molecules }: { molecules: Molecule[] }) {
         ctx.stroke();
       });
 
+      apiRef.current = { axisX, valToY, axes };
       return { yToVal, axisX, axes };
     }
 
@@ -185,14 +195,64 @@ export default function ParallelView({ molecules }: { molecules: Molecule[] }) {
       drawParallelCoords();
     };
 
-    canvas.onmousemove = (_e) => {
-      // Not handling full molecule tooltips in Parallel Coordinates yet to save space + complexity,
-      // just implementing the core brushing functionality.
-      if (isDragging) return;
-      canvas.style.cursor = 'crosshair';
+    let tooltipEl: HTMLDivElement | null = null;
+    const getTooltip = () => {
+      if (!containerRef.current) return null;
+      if (!tooltipEl) {
+        tooltipEl = document.createElement('div');
+        tooltipEl.className = 'absolute z-10 pointer-events-none px-3 py-2 bg-[#1A1918] border border-white/10 rounded-lg shadow-xl text-left max-w-[200px]';
+        tooltipEl.style.visibility = 'hidden';
+        containerRef.current.appendChild(tooltipEl);
+      }
+      return tooltipEl;
     };
 
-    canvas.onmouseleave = () => { isDragging = false; };
+    canvas.onmousemove = (e: MouseEvent) => {
+      if (isDragging) return;
+      canvas.style.cursor = 'crosshair';
+      const api = apiRef.current;
+      const cr = canvas.getBoundingClientRect();
+      const mx = e.clientX - cr.left;
+      const my = e.clientY - cr.top;
+      if (!api || molecules.length === 0) {
+        const el = getTooltip();
+        if (el) el.style.visibility = 'hidden';
+        return;
+      }
+      let bestIdx = -1;
+      let bestD = 25;
+      for (let i = 0; i < molecules.length; i++) {
+        const m = molecules[i];
+        const pts: [number, number][] = api.axes.map((k, ai) => [api.axisX(ai), api.valToY(k, m.props[k as keyof Molecule['props']] as number)]);
+        let d = 1e9;
+        for (let s = 0; s < pts.length - 1; s++) {
+          d = Math.min(d, distToSegment(mx, my, pts[s][0], pts[s][1], pts[s + 1][0], pts[s + 1][1]));
+        }
+        if (d < bestD) {
+          bestD = d;
+          bestIdx = i;
+        }
+      }
+      const el = getTooltip();
+      if (el) {
+        if (bestIdx >= 0) {
+          const mol = molecules[bestIdx];
+          const svgDataUrl = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(mol.svg)));
+          el.innerHTML = `<div class="text-[12px]"><div class="font-semibold text-white mb-1">${(mol.name || '').replace(/</g, '&lt;')}</div><div class="text-[#9C9893] mb-2">MW: ${mol.props.MW.toFixed(0)} · LogP: ${mol.props.LogP.toFixed(2)}</div><img src="${svgDataUrl}" alt="" style="width:96px;height:72px;object-fit:contain;background:#09090b;border-radius:4px" /></div>`;
+          el.style.left = Math.min(mx + 12, cr.width - 220) + 'px';
+          el.style.top = Math.min(my + 12, cr.height - 120) + 'px';
+          el.style.visibility = 'visible';
+        } else {
+          el.style.visibility = 'hidden';
+        }
+      }
+    };
+
+    canvas.onmouseleave = () => {
+      isDragging = false;
+      const el = getTooltip();
+      if (el) el.style.visibility = 'hidden';
+    };
 
   }, [molecules]);
 

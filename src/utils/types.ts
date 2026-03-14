@@ -41,8 +41,8 @@ export const PROPERTIES = [
   { key: 'FrCSP3', label: 'Fraction Csp3', unit: '' },
   { key: 'HeavyAtoms', label: 'Heavy Atom Count', unit: '' },
   { key: 'MR', label: 'Molar Refractivity', unit: '' },
-  { key: 'NumRings', label: 'Ring Count', unit: '' },
-  { key: 'AroRings', label: 'Aromatic Rings', unit: '' }
+  { key: 'Rings', label: 'Ring Count', unit: '' },
+  { key: 'AromaticRings', label: 'Aromatic Rings', unit: '' }
 ];
 
 export const DRUG_FILTERS = {
