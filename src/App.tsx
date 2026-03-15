@@ -84,15 +84,23 @@ export default function App() {
   };
 
   const handleCite = () => {
-    const citation = 'MolParetoLab — https://github.com/IlkhamFY/molparetolab';
+    const citation = `@software{molparetolab2026,
+  author = {Yabbarov, Ilkham},
+  title = {MolParetoLab: Interactive Multi-Objective Pareto Analysis of Drug-Like Molecules},
+  year = {2026},
+  url = {https://molparetolab.ilkham.com},
+  note = {Client-side web application. Source: https://github.com/IlkhamFY/molparetolab}
+}`;
     navigator.clipboard.writeText(citation).then(
-      () => setToast('Citation copied'),
-      () => {}
+      () => setToast('BibTeX citation copied'),
+      () => {
+        window.prompt('Copy BibTeX citation:', citation);
+      }
     );
   };
 
   return (
-    <div className="min-h-screen bg-[#09090b] flex flex-col font-sans text-[#e0e0e8]">
+    <div className="min-h-screen bg-[#121110] flex flex-col font-sans text-[#E8E6E3]">
       {toast && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[60] px-4 py-2 bg-[#2C2A28] border border-[#5F7367] rounded-md text-sm text-[#E8E6E3] shadow-lg animate-fade-in">
           {toast}
@@ -105,11 +113,11 @@ export default function App() {
         onExportFigure={handleExportFigure}
         onCite={handleCite}
       />
-      
+
       <main className="flex-1 grid grid-cols-1 md:grid-cols-[380px_1fr] min-h-[calc(100vh-73px)]">
-        <Sidebar 
-          molecules={molecules} 
-          setMolecules={setMolecules} 
+        <Sidebar
+          molecules={molecules}
+          setMolecules={setMolecules}
           selectedMolIdx={selectedMolIdx}
           setSelectedMolIdx={setSelectedMolIdx}
           compareIndices={compareIndices}
@@ -118,11 +126,11 @@ export default function App() {
           onUrlPayloadConsumed={() => setInitialPayloadFromUrl(null)}
           onToast={setToast}
         />
-        
+
         <div className="bg-[#1A1918] relative">
-          <Content 
-            molecules={molecules} 
-            compareIndices={compareIndices} 
+          <Content
+            molecules={molecules}
+            compareIndices={compareIndices}
             selectedMolIdx={selectedMolIdx}
             setSelectedMolIdx={setSelectedMolIdx}
             exportContainerRef={exportContainerRef}
@@ -146,13 +154,13 @@ export default function App() {
       </button>
 
       {/* Slide-out Copilot Panel */}
-      <div 
+      <div
         className={`fixed inset-y-0 right-0 w-full md:w-[420px] bg-[#1A1918] border-l border-white/5 shadow-2xl z-50 transform transition-transform duration-300 ease-in-out ${
           isCopilotOpen ? 'translate-x-0' : 'translate-x-full'
         }`}
       >
-        <CopilotPanel 
-          isOpen={isCopilotOpen} 
+        <CopilotPanel
+          isOpen={isCopilotOpen}
           onClose={() => setIsCopilotOpen(false)}
           molecules={molecules}
         />

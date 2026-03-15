@@ -34,6 +34,7 @@ const FILTER_COLORS: Record<string, string> = {
   lipinski: '#22c55e',
   veber: '#eab308',
   ghose: '#06b6d4',
+  leadlike: '#f97316',
 };
 
 export default function ParetoView({ molecules, onSelectMolecule, selectedMolIdx }: { molecules: Molecule[]; onSelectMolecule?: (idx: number) => void; selectedMolIdx?: number | null }) {

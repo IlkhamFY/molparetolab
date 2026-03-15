@@ -81,6 +81,18 @@ export const DRUG_FILTERS = {
     ],
     maxViolations: 0,
   },
+  leadlike: {
+    label: 'Lead-like',
+    color: 'orange',
+    rules: [
+      { key: 'MW', op: '<=', val: 450 },
+      { key: 'LogP', op: '<=', val: 4.5 },
+      { key: 'RotBonds', op: '<=', val: 10 },
+      { key: 'HBD', op: '<=', val: 5 },
+      { key: 'HBA', op: '<=', val: 8 },
+    ],
+    maxViolations: 0,
+  },
 };
 
 export const EXAMPLES = {
