@@ -11,7 +11,7 @@ function lerpColor(t: number): string {
   return `rgb(${r},${g},${b})`;
 }
 
-export default function SimilarityMatrixView({ molecules }: { molecules: Molecule[] }) {
+export default function SimilarityMatrixView({ molecules, onComparePair }: { molecules: Molecule[]; onComparePair?: (i: number, j: number) => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [hoverCell, setHoverCell] = useState<{ i: number; j: number } | null>(null);
@@ -152,8 +152,14 @@ export default function SimilarityMatrixView({ molecules }: { molecules: Molecul
         <canvas
           ref={canvasRef}
           className="w-full h-full"
+          style={{ cursor: hoverCell && hoverCell.i !== hoverCell.j ? 'pointer' : 'default' }}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
+          onClick={() => {
+            if (hoverCell && hoverCell.i !== hoverCell.j && onComparePair) {
+              onComparePair(hoverCell.i, hoverCell.j);
+            }
+          }}
         />
       </div>
       {hoverCell && (
@@ -161,6 +167,9 @@ export default function SimilarityMatrixView({ molecules }: { molecules: Molecul
           <span className="text-[#E8E6E3]">{molecules[hoverCell.i].name}</span> vs{' '}
           <span className="text-[#E8E6E3]">{molecules[hoverCell.j].name}</span>: Tanimoto ={' '}
           <span className="font-mono text-[#798F81]">{(matrix[hoverCell.i][hoverCell.j] * 100).toFixed(1)}%</span>
+          {hoverCell.i !== hoverCell.j && onComparePair && (
+            <span className="ml-2 text-[#9C9893]/50">click to compare</span>
+          )}
         </div>
       )}
     </div>

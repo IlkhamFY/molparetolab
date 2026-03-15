@@ -99,7 +99,7 @@ export default function Content({ molecules, compareIndices, selectedMolIdx, set
         {activeTab === 'radar' && <RadarView molecules={molecules} selectedMolIdx={selectedMolIdx} />}
         {activeTab === 'scoring' && <ScoringView molecules={molecules} />}
         {activeTab === 'parallel' && <ParallelView molecules={molecules} />}
-        {activeTab === 'similarity' && <SimilarityMatrixView molecules={molecules} />}
+        {activeTab === 'similarity' && <SimilarityMatrixView molecules={molecules} onComparePair={setCompareIndices ? (i, j) => { setCompareIndices([i, j]); setActiveTab('compare'); } : undefined} />}
         {activeTab === 'cliffs' && <ActivityCliffsView molecules={molecules} onComparePair={setCompareIndices ? (i, j) => { setCompareIndices([i, j]); setActiveTab('compare'); } : undefined} />}
         {activeTab === 'compare' && <CompareView molecules={molecules} compareIndices={compareIndices} setCompareIndices={setCompareIndices} />}
         {activeTab === 'table' && <TableView molecules={molecules} selectedMolIdx={selectedMolIdx} />}
