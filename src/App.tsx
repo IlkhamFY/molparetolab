@@ -26,6 +26,28 @@ export default function App() {
     return () => clearTimeout(t);
   }, [toast]);
 
+  // Keyboard navigation: arrow keys to cycle molecules, Escape to deselect
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (molecules.length === 0) return;
+      // Don't intercept when typing in input/textarea/select
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      if (e.key === 'ArrowDown' || e.key === 'ArrowRight') {
+        e.preventDefault();
+        setSelectedMolIdx(prev => prev === null ? 0 : Math.min(prev + 1, molecules.length - 1));
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+        e.preventDefault();
+        setSelectedMolIdx(prev => prev === null ? 0 : Math.max(prev - 1, 0));
+      } else if (e.key === 'Escape') {
+        setSelectedMolIdx(null);
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [molecules.length]);
+
   const handleShareURL = () => {
     if (molecules.length === 0) return;
     const url = getShareableUrl(molecules);
