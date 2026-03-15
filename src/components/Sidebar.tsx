@@ -315,7 +315,8 @@ export default function Sidebar({
           
           return (
             <div 
-              key={i} 
+              key={i}
+              ref={el => { if (isSelected && el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }}
               onClick={() => setSelectedMolIdx(isSelected ? null : i)}
               onContextMenu={(e) => {
                 e.preventDefault();
