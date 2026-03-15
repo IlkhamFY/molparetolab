@@ -3,10 +3,27 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Interactive multi-objective Pareto analysis of drug-like molecules. Rank by MW, LogP, HBD, HBA, TPSA, RotBonds. 100% client-side, no data leaves your browser." />
+    <meta name="author" content="Ilkham Yabbarov" />
+    <meta name="keywords" content="drug discovery, Pareto, multi-objective, SMILES, Lipinski, ADMET, cheminformatics, RDKit" />
+
+    <!-- Open Graph -->
+    <meta property="og:title" content="MolParetoLab — Multi-Objective Molecule Analysis" />
+    <meta property="og:description" content="Compare and rank drug-like molecules across 6 properties. Pareto fronts, drug-likeness filters, AI copilot. Open source, client-side." />
+    <meta property="og:url" content="https://molparetolab.ilkham.com" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="MolParetoLab" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="MolParetoLab — Multi-Objective Molecule Analysis" />
+    <meta name="twitter:description" content="Pareto ranking, drug filters, AI copilot — all in the browser. Open source." />
+
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>MolParetoLab</title>
+    <link rel="canonical" href="https://molparetolab.ilkham.com" />
+    <title>MolParetoLab — Multi-Objective Molecule Analysis</title>
     <style>
-      body { background-color: #1A1918; color: #E8E6E3; }
+      body { background-color: #121110; color: #E8E6E3; margin: 0; }
     </style>
     <!-- RDKit WASM -->
     <script src="https://unpkg.com/@rdkit/rdkit/dist/RDKit_minimal.js"></script>
