@@ -94,7 +94,7 @@ export default function Content({ molecules, compareIndices, selectedMolIdx, set
 
       {/* View Content */}
       <div className="view-container" ref={exportContainerRef}>
-        {activeTab === 'pareto' && <ParetoView molecules={molecules} onSelectMolecule={setSelectedMolIdx ? (idx) => setSelectedMolIdx(idx) : undefined} />}
+        {activeTab === 'pareto' && <ParetoView molecules={molecules} onSelectMolecule={setSelectedMolIdx ? (idx) => setSelectedMolIdx(idx) : undefined} selectedMolIdx={selectedMolIdx} />}
         {activeTab === 'egg' && <EggView molecules={molecules} />}
         {activeTab === 'radar' && <RadarView molecules={molecules} selectedMolIdx={selectedMolIdx} />}
         {activeTab === 'scoring' && <ScoringView molecules={molecules} />}

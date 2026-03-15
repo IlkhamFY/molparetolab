@@ -36,7 +36,7 @@ const FILTER_COLORS: Record<string, string> = {
   ghose: '#06b6d4',
 };
 
-export default function ParetoView({ molecules, onSelectMolecule }: { molecules: Molecule[]; onSelectMolecule?: (idx: number) => void }) {
+export default function ParetoView({ molecules, onSelectMolecule, selectedMolIdx }: { molecules: Molecule[]; onSelectMolecule?: (idx: number) => void; selectedMolIdx?: number | null }) {
   const [axes, setAxes] = useState<ScatterAxes[]>(DEFAULT_AXES);
   const [showAll, setShowAll] = useState(true);
   const [activeFilter, setActiveFilter] = useState<string | null>('lipinski');
@@ -139,7 +139,7 @@ export default function ParetoView({ molecules, onSelectMolecule }: { molecules:
               </div>
             </div>
             <div className="flex-1 relative">
-               <ScatterChart molecules={molecules} xKey={axis.x} yKey={axis.y} activeFilter={activeFilter} onSelectMolecule={onSelectMolecule} />
+               <ScatterChart molecules={molecules} xKey={axis.x} yKey={axis.y} activeFilter={activeFilter} onSelectMolecule={onSelectMolecule} selectedMolIdx={selectedMolIdx} />
             </div>
           </div>
         ))}
@@ -172,16 +172,17 @@ function buildAnnotations(xKey: string, yKey: string): Record<string, any> {
       type: 'line',
       scaleID: 'x',
       value: xThresh.value,
-      borderColor: 'rgba(234, 179, 8, 0.35)',
-      borderWidth: 1.5,
+      borderColor: 'rgba(234, 179, 8, 0.3)',
+      borderWidth: 1,
       borderDash: [6, 4],
       label: {
         display: true,
         content: xThresh.label,
-        position: 'start',
-        color: 'rgba(234, 179, 8, 0.6)',
-        font: { size: 10 },
-        backgroundColor: 'transparent',
+        position: 'end',
+        color: 'rgba(234, 179, 8, 0.5)',
+        font: { size: 9 },
+        backgroundColor: 'rgba(26,25,24,0.8)',
+        padding: 3,
       },
     };
   }
@@ -190,23 +191,24 @@ function buildAnnotations(xKey: string, yKey: string): Record<string, any> {
       type: 'line',
       scaleID: 'y',
       value: yThresh.value,
-      borderColor: 'rgba(234, 179, 8, 0.35)',
-      borderWidth: 1.5,
+      borderColor: 'rgba(234, 179, 8, 0.3)',
+      borderWidth: 1,
       borderDash: [6, 4],
       label: {
         display: true,
         content: yThresh.label,
-        position: 'start',
-        color: 'rgba(234, 179, 8, 0.6)',
-        font: { size: 10 },
-        backgroundColor: 'transparent',
+        position: 'end',
+        color: 'rgba(234, 179, 8, 0.5)',
+        font: { size: 9 },
+        backgroundColor: 'rgba(26,25,24,0.8)',
+        padding: 3,
       },
     };
   }
   return annotations;
 }
 
-function ScatterChart({ molecules, xKey, yKey, activeFilter, onSelectMolecule }: { molecules: Molecule[]; xKey: keyof Molecule['props']; yKey: keyof Molecule['props']; activeFilter: string | null; onSelectMolecule?: (idx: number) => void }) {
+function ScatterChart({ molecules, xKey, yKey, activeFilter, onSelectMolecule, selectedMolIdx }: { molecules: Molecule[]; xKey: keyof Molecule['props']; yKey: keyof Molecule['props']; activeFilter: string | null; onSelectMolecule?: (idx: number) => void; selectedMolIdx?: number | null }) {
   const data = useMemo(() => {
     const passData: PointData[] = [];
     const failData: PointData[] = [];
@@ -258,7 +260,7 @@ function ScatterChart({ molecules, xKey, yKey, activeFilter, onSelectMolecule }:
 
   const tooltipRef = useRef<HTMLDivElement>(null);
 
-  // Custom plugin: gold ring for Pareto-optimal
+  // Custom plugin: gold ring for Pareto-optimal + teal pulse for selected
   const customPlugin = useMemo(() => ({
     id: 'paretoRing',
     afterDatasetsDraw(chart: any) {
@@ -273,21 +275,32 @@ function ScatterChart({ molecules, xKey, yKey, activeFilter, onSelectMolecule }:
           const raw = dataset.data[idx] as PointData | undefined;
           if (!raw) return;
 
+          const ex = element.x as number;
+          const ey = element.y as number;
+
           if (raw.paretoRank === 1) {
-            const ex = element.x as number;
-            const ey = element.y as number;
             ctx.beginPath();
             ctx.arc(ex, ey, 12, 0, Math.PI * 2);
             ctx.strokeStyle = '#fbbf24';
             ctx.lineWidth = 2.5;
             ctx.stroke();
           }
+
+          if (selectedMolIdx != null && raw.molIndex === selectedMolIdx) {
+            ctx.beginPath();
+            ctx.arc(ex, ey, 15, 0, Math.PI * 2);
+            ctx.strokeStyle = '#2dd4bf';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 3]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+          }
         });
       }
 
       ctx.restore();
     },
-  }), []);
+  }), [selectedMolIdx]);
 
   return (
     <div className="relative w-full h-full">
