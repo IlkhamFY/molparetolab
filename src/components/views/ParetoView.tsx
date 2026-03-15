@@ -311,6 +311,9 @@ function ScatterChart({ molecules, xKey, yKey, activeFilter, onSelectMolecule }:
           responsive: true,
           maintainAspectRatio: false,
           animation: { duration: 300 },
+          onHover: (_event: any, elements: any[], chart: any) => {
+            chart.canvas.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+          },
           plugins: {
             legend: { display: false },
             annotation: {

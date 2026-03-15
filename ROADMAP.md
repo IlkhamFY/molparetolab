@@ -1,50 +1,55 @@
-# MolParetoLab Overnight Build Plan
+# MolParetoLab Roadmap
 
-## v1 (DONE - 11:30 PM)
-- [x] Core app: SMILES input, RDKit.js parsing, property computation
-- [x] Pareto ranking (non-dominated sorting)
-- [x] 4 views: scatter, radar, table, dominance
-- [x] Lipinski Ro5 checking
-- [x] Example datasets
-- [x] CSV export
-- [x] Dark theme
-- [x] GitHub Pages live
+## Shipped
 
-## v2 (12:00 AM) - Interactive Pareto Front
-- [x] Axis selector dropdowns on scatter plots (any property vs any)
-- [x] Lipinski threshold lines on scatter plots
-- [ ] Hover tooltips with molecule structure preview
-- [x] Highlight Pareto front line connecting non-dominated points
-- [x] Color by Lipinski pass/fail
+### v0.1–v0.10 (Core)
+- SMILES input, RDKit.js WASM parsing, property computation
+- Pareto non-dominated sorting across 6 objectives
+- 9 analysis views: Pareto scatter, BOILED-Egg, Radar, Scoring, Parallel coords, Similarity matrix, Activity cliffs, Compare, Table & Dominance
+- Drug-likeness filters: Lipinski Ro5, Veber, Ghose, Lead-like
+- CSV/SDF import/export, Share URL (LZ-String compressed)
+- ChEMBL batch fetch by ID
+- Dark theme (warm zinc palette)
+- GitHub Pages auto-deploy
 
-## v3 (1:00 AM) - Molecule Drawing
-- [ ] RDKit.js molecule editor/drawer integration
-- [ ] Draw a molecule -> instant property analysis
-- [ ] Copy SMILES from drawing
+### v0.11–v0.12 (AI + React Migration)
+- AI Copilot slide-out panel (BYOK: Gemini, OpenAI, Anthropic)
+- React 19 + TypeScript + Vite 8 migration
+- Tailwind CSS styling
 
-## v4 (4:00 AM) - Share & Polish
-- [x] Share URL with encoded molecules (LZ-String compressed URL params)
-- [x] SDF file upload (client-side .sdf parsing)
-- [x] Landing hero section explaining the tool
-- [x] README.md with features, how-to, screenshot placeholder
-- [x] og:image meta tag for social preview
-- [ ] Custom scoring profiles (drug-like, CNS, oral bioavailability) → moved to v5
-- [ ] Weighted multi-objective score → moved to v5
+### v0.13 (Visual Polish)
+- Fixed all Chart.js rendering issues (Pareto auto-scale, Radar normalization, Similarity centering)
+- BOILED-Egg axis labels + threshold lines
+- Consistent dark palette across all canvas views
+- Zero console errors (DominanceMatrix key fix)
 
-## v5 (3:00 AM) - Similarity & Clustering
-- [ ] Tanimoto similarity matrix (Morgan fingerprints via RDKit.js)
-- [ ] Cluster molecules by similarity
-- [ ] Chemical space diversity score
+### v0.14 (Interaction + UX)
+- Empty state hero with feature cards (Lucide icons)
+- Lipinski threshold annotation lines on Pareto scatter
+- Click-to-select molecules on Pareto charts
+- Compare tab molecule dropdowns
+- Expandable sidebar cards (SMILES copy, full properties)
+- Pointer cursor on chart hover
 
-## v6 (4:00 AM) - Polish & Share-ability
-- [x] Share URL with encoded molecules (URL params) — done in v4
-- [ ] Screenshot/export current view as PNG
-- [x] README with screenshots and GIF — done in v4
-- [x] Social preview image (og:image) — done in v4
-- [x] Landing page hero section — done in v4
+## Next Up
 
-## v7 (5:00 AM) - Real-World Data
-- [x] Load SDF files — done in v4
-- [ ] Paste from clipboard (tab-separated with headers)
-- [ ] ChEMBL/PubChem lookup by name
-- [ ] Batch mode for >100 molecules
+### Performance
+- [ ] Web Worker for RDKit.js analysis (unblock UI on 100+ molecules)
+- [ ] Virtual scrolling for sidebar with 500+ molecules
+
+### Features
+- [ ] Clipboard paste (tab-separated with headers)
+- [ ] PubChem name lookup (batch)
+- [ ] ADMETlab API link-out per molecule
+- [ ] Export current view as PNG (per-tab canvas capture)
+- [ ] Molecule editor (RDKit.js drawing integration)
+
+### Academic
+- [ ] JCIM application note for academic adoption
+- [ ] Proper citation format (BibTeX)
+- [ ] DOI via Zenodo
+
+### Distribution
+- [ ] Browser extension (right-click SMILES → analyze)
+- [ ] npm package for programmatic use
+- [ ] PyPI wrapper for Python integration

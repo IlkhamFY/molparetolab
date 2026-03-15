@@ -355,7 +355,7 @@ export default function Sidebar({
               </div>
             </div>
             
-            <div className="mt-3 flex gap-1.5 flex-wrap">
+            <div className="mt-2 flex gap-1.5 flex-wrap">
               {m.paretoRank === 1 && (
                 <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#22c55e]/15 text-[#22c55e]">
                   pareto
@@ -369,6 +369,30 @@ export default function Sidebar({
                 </span>
               ))}
             </div>
+
+            {/* Expanded details when selected */}
+            {isSelected && (
+              <div className="mt-3 pt-3 border-t border-white/5 space-y-2">
+                <div className="grid grid-cols-3 gap-x-3 gap-y-1 text-[11px]">
+                  {(['HBD','HBA','TPSA','RotBonds','FrCSP3','Rings'] as const).map(k => (
+                    <div key={k} className="flex justify-between">
+                      <span className="text-[#9C9893]">{k}</span>
+                      <span className="font-mono text-[#E8E6E3]">{typeof m.props[k] === 'number' ? (m.props[k] as number).toFixed(k === 'FrCSP3' ? 2 : 0) : m.props[k]}</span>
+                    </div>
+                  ))}
+                </div>
+                <div
+                  className="mt-1 p-1.5 bg-[#1A1918] rounded text-[10px] font-mono text-[#9C9893] break-all cursor-pointer hover:text-[#E8E6E3] transition-colors"
+                  title="Click to copy SMILES"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(m.smiles).then(() => onToast?.('SMILES copied'));
+                  }}
+                >
+                  {m.smiles}
+                </div>
+              </div>
+            )}
             </div>
           );
         })}
